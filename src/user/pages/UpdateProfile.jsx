@@ -11,6 +11,11 @@ import {
 } from "firebase/firestore";
 import { uploadImage } from "../../config/cloudinary";
 import { displayCompany } from "../utils/profileHelpers.jsx";
+import {
+  adminLockFields,
+  isDesignatedAdmin,
+  refusedAccountChange,
+} from "../../admin/queueRules";
 import Cropper from "react-easy-crop";
 import {
   ArrowLeft,
@@ -517,10 +522,16 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
 
       const userDocRef = doc(db, "users", currentUser.uid);
       const userDoc = await getDoc(userDocRef);
+      const refused = refusedAccountChange(
+        { ...(userDoc.data() || {}), email: currentUser.email, uid: currentUser.uid },
+        updateData,
+      );
+      if (refused) throw new Error(refused);
 
       if (!userDoc.exists()) {
         await setDoc(userDocRef, {
           ...updateData,
+          ...(isDesignatedAdmin(currentUser) ? adminLockFields() : {}),
           email: currentUser.email || "",
           createdAt: new Date().toISOString(),
           uid: currentUser.uid,
@@ -530,7 +541,13 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
           coverPhoto: currentCoverURL,
         });
       } else {
-        await updateDoc(userDocRef, updateData);
+        await updateDoc(
+          userDocRef,
+          isDesignatedAdmin(currentUser) ||
+            isDesignatedAdmin(userDoc.data())
+            ? { ...updateData, ...adminLockFields() }
+            : updateData,
+        );
       }
 
       setUploadProgress(100);

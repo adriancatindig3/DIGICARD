@@ -8,7 +8,16 @@ import {
 } from "firebase/auth";
 import { auth, db } from "../../config/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { createPendingUser } from "../utils/ensureUserAccount";
+import {
+  createPendingUser,
+  ensureDesignatedAdmin,
+} from "../utils/ensureUserAccount";
+import {
+  PROTECTED_ADMIN_EMAIL,
+  isAdminAccount,
+  isDesignatedAdmin,
+  routePath,
+} from "../../admin/queueRules";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -35,39 +44,31 @@ function Login() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          if (isDesignatedAdmin(user)) {
+            try {
+              await ensureDesignatedAdmin(user);
+            } catch (createErr) {
+              console.error("Error restoring admin account:", createErr);
+            }
+            navigate("/admin", { replace: true });
+            return;
+          }
+
           const userDocRef = doc(db, "users", user.uid);
           const userDoc = await getDoc(userDocRef);
 
           if (userDoc.exists()) {
-            const status = userDoc.data()?.accountStatus;
-
-            // Route based on account status
-            switch (status) {
-              case "approved":
-                navigate("/home", { replace: true });
-                break;
-              case "pending":
-                navigate("/pending", { replace: true });
-                break;
-              case "rejected":
-                navigate("/rejected", { replace: true });
-                break;
-              case "deleted":
-                navigate("/deleted", { replace: true });
-                break;
-              default:
-                navigate("/pending", { replace: true });
-            }
+            navigate(routePath(userDoc.data()), { replace: true });
             return;
-          } else {
-            // No profile yet — same pending status page as an existing user.
-            try {
-              await createPendingUser(user);
-            } catch (createErr) {
-              console.error("Error creating user account:", createErr);
-            }
-            navigate("/pending", { replace: true });
           }
+
+          // No profile yet — same pending status page as an existing user.
+          try {
+            await createPendingUser(user);
+          } catch (createErr) {
+            console.error("Error creating user account:", createErr);
+          }
+          navigate("/pending", { replace: true });
         } catch (err) {
           console.error("Auth check error:", err);
           setCheckingAuth(false);
@@ -85,33 +86,60 @@ function Login() {
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
 
+      if (isDesignatedAdmin(user) || isDesignatedAdmin(userDoc.data())) {
+        await ensureDesignatedAdmin(user);
+        return {
+          success: true,
+          status: "approved",
+          accountStatus: "approved",
+          accountType: "admin",
+          role: "admin",
+          email: user.email || PROTECTED_ADMIN_EMAIL,
+        };
+      }
+
       if (!userDoc.exists()) {
         await createPendingUser(user);
         return { success: true, status: "pending", accountType: "user" };
-      } else {
-        const status = userDoc.data()?.accountStatus;
-        const accountType = userDoc.data()?.accountType;
+      }
 
-        // Handle deleted accounts
-        if (status === "deleted") {
-          await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
-          return { success: true, status: "deleted", accountType };
-        }
+      const data = userDoc.data();
+      const status = data?.accountStatus;
+      const accountType = data?.accountType;
+      const role = data?.role;
 
-        // Handle rejected accounts
-        if (status === "rejected") {
-          await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
-          return { success: true, status: "rejected", accountType };
-        }
-
-        // Update last login for existing users
+      if (isAdminAccount(data)) {
         await updateDoc(userRef, {
           lastLoginAt: new Date().toISOString(),
-          isActive: status === "approved",
+          isActive: true,
         });
-
-        return { success: true, status: status || "pending", accountType };
+        return {
+          success: true,
+          status: status || "approved",
+          accountType,
+          role,
+        };
       }
+
+      // Handle deleted accounts
+      if (status === "deleted") {
+        await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
+        return { success: true, status: "deleted", accountType, role };
+      }
+
+      // Handle rejected accounts
+      if (status === "rejected") {
+        await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
+        return { success: true, status: "rejected", accountType, role };
+      }
+
+      // Update last login for existing users
+      await updateDoc(userRef, {
+        lastLoginAt: new Date().toISOString(),
+        isActive: status === "approved",
+      });
+
+      return { success: true, status: status || "pending", accountType, role };
     } catch (error) {
       console.error("Error checking user:", error);
       return { success: false, error: error.message };
@@ -140,6 +168,11 @@ function Login() {
       const saveResult = await saveUserToFirestore(user);
 
       if (!saveResult.success) {
+        if (isDesignatedAdmin(user)) {
+          navigate("/admin", { replace: true });
+          setLoading(false);
+          return;
+        }
         await signOut(auth);
         setError(
           saveResult.error || "Failed to create account. Please try again.",
@@ -148,18 +181,7 @@ function Login() {
         return;
       }
 
-      // Route based on account status — same destinations as returning users
-      if (saveResult.status === "approved") {
-        navigate("/home", { replace: true });
-      } else if (saveResult.status === "pending") {
-        navigate("/pending", { replace: true });
-      } else if (saveResult.status === "rejected") {
-        navigate("/rejected", { replace: true });
-      } else if (saveResult.status === "deleted") {
-        navigate("/deleted", { replace: true });
-      } else {
-        navigate("/pending", { replace: true });
-      }
+      navigate(routePath(saveResult), { replace: true });
     } catch (err) {
       console.error("Login error:", err);
       if (

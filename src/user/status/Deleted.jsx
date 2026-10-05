@@ -5,6 +5,7 @@ import { auth, db } from "../../config/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
+import { isDesignatedAdmin } from "../../admin/queueRules";
 
 function Deleted() {
   const [isChecking, setIsChecking] = useState(true);
@@ -18,6 +19,11 @@ function Deleted() {
       return;
     }
 
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
     const userDocRef = doc(db, "users", currentUser.uid);
 
     // Real-time listener for status changes
@@ -25,6 +31,10 @@ function Deleted() {
       userDocRef,
       async (doc) => {
         if (doc.exists()) {
+          if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
+            navigate("/admin", { replace: true });
+            return;
+          }
           const status = doc.data()?.accountStatus;
 
           // If status changes to approved, redirect to home
@@ -39,6 +49,8 @@ function Deleted() {
           else if (status === "rejected") {
             navigate("/rejected", { replace: true });
           }
+        } else if (isDesignatedAdmin(auth.currentUser)) {
+          navigate("/admin", { replace: true });
         } else {
           // Document doesn't exist, sign out
           await signOut(auth);

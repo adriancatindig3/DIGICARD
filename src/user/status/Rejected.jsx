@@ -5,6 +5,7 @@ import { auth, db } from "../../config/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
+import { isDesignatedAdmin } from "../../admin/queueRules";
 
 function Rejected() {
   const [isChecking, setIsChecking] = useState(true);
@@ -18,6 +19,11 @@ function Rejected() {
       return;
     }
 
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
     const userDocRef = doc(db, "users", currentUser.uid);
 
     // Real-time listener for status changes
@@ -25,6 +31,10 @@ function Rejected() {
       userDocRef,
       (doc) => {
         if (doc.exists()) {
+          if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
+            navigate("/admin", { replace: true });
+            return;
+          }
           const status = doc.data()?.accountStatus;
 
           // If status changes to approved, redirect to home

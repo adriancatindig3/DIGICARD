@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "../../config/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { isDesignatedAdmin } from "../../admin/queueRules";
 
 export const useUserStatus = () => {
   const [status, setStatus] = useState(null);
@@ -17,6 +18,11 @@ export const useUserStatus = () => {
       return;
     }
 
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
     const userDocRef = doc(db, "users", currentUser.uid);
 
     // Real-time listener for user status
@@ -25,6 +31,13 @@ export const useUserStatus = () => {
       (doc) => {
         if (doc.exists()) {
           const data = doc.data();
+          if (isDesignatedAdmin({ id: doc.id, ...data })) {
+            setUserData(data);
+            setStatus("approved");
+            setLoading(false);
+            navigate("/admin", { replace: true });
+            return;
+          }
           const currentStatus = data.accountStatus || "pending";
           setStatus(currentStatus);
           setUserData(data);

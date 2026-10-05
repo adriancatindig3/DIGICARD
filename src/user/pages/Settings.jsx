@@ -17,6 +17,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { isDesignatedAdmin, refusedAccountChange } from "../../admin/queueRules";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut,
@@ -98,6 +99,12 @@ function Settings({ darkMode }) {
       return;
     }
 
+    const refused = refusedAccountChange(currentUser, { delete: true });
+    if (isDesignatedAdmin(currentUser) || refused) {
+      setDeleteError(refused || "This admin account cannot be deleted.");
+      return;
+    }
+
     setDeleteLoading(true);
     setDeleteError("");
 
@@ -113,6 +120,9 @@ function Settings({ darkMode }) {
       const user = auth.currentUser;
       if (!user || user.uid !== originalUid)
         throw new Error("User session changed during reauthentication");
+      if (isDesignatedAdmin(user) || isDesignatedAdmin(result.user)) {
+        throw new Error("This admin account cannot be deleted.");
+      }
       const uid = user.uid;
 
       await deleteDoc(doc(db, "users", uid));

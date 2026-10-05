@@ -17,6 +17,7 @@ import {
   Sun,
 } from "lucide-react";
 import { auth, db } from "../../config/firebase";
+import { isDesignatedAdmin } from "../../admin/queueRules";
 import UpdateProfile from "./UpdateProfile";
 import ViewQr from "./ViewQr";
 import SelectLayout from "./SelectLayout";
@@ -63,6 +64,11 @@ function Home() {
       return;
     }
 
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
     const userDocRef = doc(db, "users", currentUser.uid);
 
     // Listen for real-time status changes
@@ -70,6 +76,10 @@ function Home() {
       userDocRef,
       (doc) => {
         if (doc.exists()) {
+          if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
+            navigate("/admin", { replace: true });
+            return;
+          }
           const status = doc.data()?.accountStatus;
 
           // If status changes from approved to anything else, redirect immediately
