@@ -86,12 +86,7 @@ export async function revokeActivationKey(code, admin) {
     if (snap.data().status === "used") {
       throw new Error("A used key stays on record.");
     }
-    if (snap.data().status === "revoked") return;
-    tx.update(ref, {
-      status: "revoked",
-      revokedAt: new Date().toISOString(),
-      revokedBy: admin?.email || "admin",
-    });
+    tx.delete(ref);
   });
   await logAdminAction(
     admin?.email,

@@ -67,6 +67,9 @@ const AdminActivationKeys = ({ darkMode, currentUser }) => {
     setError("");
     try {
       await revokeActivationKey(code, currentUser);
+      setFreshKeys((prev) =>
+        prev.filter((key) => key.replace(/-/g, "") !== code),
+      );
     } catch (err) {
       setError(err.message || "Could not revoke that key.");
     } finally {
@@ -74,7 +77,8 @@ const AdminActivationKeys = ({ darkMode, currentUser }) => {
     }
   };
 
-  const available = keys.filter((key) => key.status === "available");
+  const visibleKeys = keys.filter((key) => key.status !== "revoked");
+  const available = visibleKeys.filter((key) => key.status === "available");
 
   return (
     <div className="space-y-4">
@@ -173,14 +177,13 @@ const AdminActivationKeys = ({ darkMode, currentUser }) => {
           <div className="py-8 flex justify-center">
             <Loader2 size={18} className={`animate-spin ${muted}`} />
           </div>
-        ) : keys.length === 0 ? (
+        ) : visibleKeys.length === 0 ? (
           <p className={`text-sm ${muted}`}>No keys yet.</p>
         ) : (
           <ul className="space-y-2">
-            {keys.map((key) => {
+            {visibleKeys.map((key) => {
               const label = formatActivationKey(key.code || key.id);
               const used = key.status === "used";
-              const revoked = key.status === "revoked";
               return (
                 <li
                   key={key.id}
@@ -193,12 +196,10 @@ const AdminActivationKeys = ({ darkMode, currentUser }) => {
                     className={`text-[0.65rem] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
                       used
                         ? "bg-gray-100 text-gray-500"
-                        : revoked
-                          ? "bg-red-50 text-red-600"
-                          : "bg-green-50 text-green-700"
+                        : "bg-green-50 text-green-700"
                     }`}
                   >
-                    {used ? "Used" : revoked ? "Revoked" : "Available"}
+                    {used ? "Used" : "Available"}
                   </span>
                   {used && (
                     <span className={`text-xs ${muted}`}>
@@ -216,7 +217,7 @@ const AdminActivationKeys = ({ darkMode, currentUser }) => {
                       {copied === key.id ? "Copied" : "Copy"}
                     </span>
                   </button>
-                  {!used && !revoked && (
+                  {!used && (
                     <button
                       type="button"
                       onClick={() => handleRevoke(key.id)}
