@@ -1,13 +1,12 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
 import CoverBanner from "../components/CoverBanner";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
-import { cardFill, cardRootProps } from "../utils/cardStyle";
+import { cardFill, cardRootProps, styleForLayout } from "../utils/cardStyle";
 
-const Layout4 = ({ userData, onConnect }) => (
+const Layout4 = ({ userData }) => (
   <div
     {...cardRootProps(
-      userData,
+      styleForLayout(userData, 4),
       "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
       "text-white",
     )}
@@ -172,7 +171,6 @@ const Layout4 = ({ userData, onConnect }) => (
             </div>
           </div>
         )}
-        <ConnectButton onClick={onConnect} dark={true} />
       </div>
     </div>
   </div>

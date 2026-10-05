@@ -4,14 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { getDoc } from "firebase/firestore";
 import { displayCompany } from "../utils/profileHelpers.jsx";
 import CoverBanner from "../components/CoverBanner";
-import { updateDoc } from "firebase/firestore";
+import { deleteField, updateDoc } from "firebase/firestore";
 import { canonicalUserRef } from "../utils/ensureUserAccount";
 import CardStyleEditor from "../components/CardStyleEditor";
 import {
   DEFAULT_CARD_STYLE,
   cardFill,
   cardRootProps,
-  cardStyleFromAccount,
+  foldLegacyCardStyle,
+  styleForLayout,
 } from "../utils/cardStyle";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -130,6 +131,18 @@ const SelectLayout = ({ darkMode }) => {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
+          const folded = foldLegacyCardStyle(data);
+          if (folded.migrated) {
+            await updateDoc(userDocRef, {
+              cardStyles: folded.cardStyles,
+              cardColorStart: deleteField(),
+              cardColorEnd: deleteField(),
+              cardGradient: deleteField(),
+              cardGradientAngle: deleteField(),
+              cardFont: deleteField(),
+              cardTextColor: deleteField(),
+            });
+          }
           setUserData({
             displayName: data.displayName || currentUser.displayName || "User",
             email: currentUser.email || "",
@@ -150,7 +163,12 @@ const SelectLayout = ({ darkMode }) => {
             selectedLayout: data.selectedLayout || 1,
             coverPhotoURL: data.coverPhotoURL || "",
             skills: data.skills || "",
-            ...cardStyleFromAccount(data),
+            cardStyles: folded.cardStyles,
+            cardColorStart: "",
+            cardColorEnd: "",
+            cardGradient: "",
+            cardFont: "",
+            cardTextColor: "",
           });
           setSelectedLayout(data.selectedLayout || 1);
         } else {
@@ -199,15 +217,16 @@ const SelectLayout = ({ darkMode }) => {
   };
 
   const openCardEditor = () => {
-    const saved = cardStyleFromAccount(userData);
+    const saved = styleForLayout(userData, selectedLayout);
+    const hasSavedColors = Boolean(saved.cardColorStart);
     setDraftStyle({
       cardColorStart: saved.cardColorStart || DEFAULT_CARD_STYLE.cardColorStart,
       cardColorEnd: saved.cardColorEnd || DEFAULT_CARD_STYLE.cardColorEnd,
-      cardGradientAngle:
-        userData?.cardGradientAngle == null && !saved.cardColorStart
-          ? DEFAULT_CARD_STYLE.cardGradientAngle
-          : saved.cardGradientAngle,
+      cardGradientAngle: hasSavedColors
+        ? saved.cardGradientAngle
+        : DEFAULT_CARD_STYLE.cardGradientAngle,
       cardFont: saved.cardFont || DEFAULT_CARD_STYLE.cardFont,
+      cardTextColor: saved.cardTextColor || "",
     });
     setEditingCard(true);
   };
@@ -215,18 +234,36 @@ const SelectLayout = ({ darkMode }) => {
   const saveCardStyle = async () => {
     if (!user || styleSaving) return;
     setStyleSaving(true);
-    const next = {
+    const key = String(selectedLayout);
+    const entry = {
       cardColorStart: draftStyle.cardColorStart,
       cardColorEnd: draftStyle.cardColorEnd,
-      cardGradient: "",
       cardGradientAngle: draftStyle.cardGradientAngle,
       cardFont: draftStyle.cardFont,
-      updatedAt: new Date().toISOString(),
+      cardTextColor: draftStyle.cardTextColor || "",
     };
+    const cardStyles = { ...(userData?.cardStyles || {}), [key]: entry };
     try {
       const userDocRef = await canonicalUserRef(user);
-      await updateDoc(userDocRef, next);
-      setUserData((prev) => ({ ...prev, ...next }));
+      await updateDoc(userDocRef, {
+        cardStyles,
+        cardColorStart: deleteField(),
+        cardColorEnd: deleteField(),
+        cardGradient: deleteField(),
+        cardGradientAngle: deleteField(),
+        cardFont: deleteField(),
+        cardTextColor: deleteField(),
+        updatedAt: new Date().toISOString(),
+      });
+      setUserData((prev) => ({
+        ...prev,
+        cardStyles,
+        cardColorStart: "",
+        cardColorEnd: "",
+        cardGradient: "",
+        cardFont: "",
+        cardTextColor: "",
+      }));
       setEditingCard(false);
       showToast("Card style saved");
     } catch (e) {
@@ -282,7 +319,7 @@ const SelectLayout = ({ darkMode }) => {
   const Layout1 = () => (
     <div
       {...cardRootProps(
-        userData,
+        styleForLayout(userData, 1),
         "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
         "text-white",
       )}
@@ -484,7 +521,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout2 = () => (
-    <div {...cardRootProps(userData, "#0f1623", "text-white")}>
+    <div {...cardRootProps(styleForLayout(userData, 2), "#0f1623", "text-white")}>
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
           <div
@@ -688,7 +725,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout3 = () => (
-    <div {...cardRootProps(userData, "#ffffff")}>
+    <div {...cardRootProps(styleForLayout(userData, 3), "#ffffff")}>
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
@@ -821,7 +858,7 @@ const SelectLayout = ({ darkMode }) => {
   const Layout4 = () => (
     <div
       {...cardRootProps(
-        userData,
+        styleForLayout(userData, 4),
         "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
         "text-white",
       )}
@@ -995,7 +1032,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout5 = () => (
-    <div {...cardRootProps(userData, "#0d1b2e", "text-white")}>
+    <div {...cardRootProps(styleForLayout(userData, 5), "#0d1b2e", "text-white")}>
       <CoverBanner src={userData?.coverPhotoURL}>
         <div
           style={{ background: cardFill("linear-gradient(135deg, #0d1b2e, #1a3a5c)") }}
@@ -1165,7 +1202,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout6 = () => (
-    <div {...cardRootProps(userData, "#ffffff")}>
+    <div {...cardRootProps(styleForLayout(userData, 6), "#ffffff")}>
       <CoverBanner
         src={userData?.coverPhotoURL}
         alt=""
@@ -1287,7 +1324,7 @@ const SelectLayout = ({ darkMode }) => {
   const Layout7 = () => (
     <div
       {...cardRootProps(
-        userData,
+        styleForLayout(userData, 7),
         "linear-gradient(160deg, #2a3a2a, #1a2a1e)",
         "text-white",
       )}
@@ -1326,16 +1363,6 @@ const SelectLayout = ({ darkMode }) => {
             {userData.bio}
           </p>
         )}
-
-        <button
-          className="w-full py-3 rounded-xl text-sm font-medium mb-4"
-          style={{
-            background: "rgba(255,255,255,0.15)",
-            border: "0.5px solid rgba(255,255,255,0.25)",
-          }}
-        >
-          Let's connect
-        </button>
 
         {/* Skills Section */}
         {userData?.skills && (
@@ -1463,7 +1490,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout8 = () => (
-    <div {...cardRootProps(userData, "#0f1623", "text-white")}>
+    <div {...cardRootProps(styleForLayout(userData, 8), "#0f1623", "text-white")}>
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div
           className="w-24 h-24 rounded-full overflow-hidden border-2 mb-3"
@@ -1498,16 +1525,6 @@ const SelectLayout = ({ darkMode }) => {
             {userData.bio}
           </p>
         )}
-
-        <button
-          className="w-full py-3 rounded-xl text-sm font-medium mb-4"
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            border: "0.5px solid rgba(255,255,255,0.15)",
-          }}
-        >
-          Let's connect
-        </button>
 
         {/* Skills Section */}
         {userData?.skills && (
@@ -1646,7 +1663,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout9 = () => (
-    <div {...cardRootProps(userData, "#ffffff")}>
+    <div {...cardRootProps(styleForLayout(userData, 9), "#ffffff")}>
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-gray-200 mb-3">
           {userData?.photoURL ? (
@@ -1675,10 +1692,6 @@ const SelectLayout = ({ darkMode }) => {
             {userData.bio}
           </p>
         )}
-
-        <button className="w-full py-3 rounded-xl text-sm font-medium mb-4 bg-gray-900 text-white">
-          Let's connect
-        </button>
 
         {/* Skills Section */}
         {userData?.skills && (

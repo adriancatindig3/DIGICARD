@@ -1,9 +1,8 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
-import { cardRootProps } from "../utils/cardStyle";
-const Layout2 = ({ userData, onConnect }) => (
-  <div {...cardRootProps(userData, "#0f1623", "text-white")}>
+import { cardRootProps, styleForLayout } from "../utils/cardStyle";
+const Layout2 = ({ userData }) => (
+  <div {...cardRootProps(styleForLayout(userData, 2), "#0f1623", "text-white")}>
     <div className="pt-6 pb-4 px-4">
       <div className="flex items-center gap-4 mb-4">
         <div
@@ -188,7 +187,6 @@ const Layout2 = ({ userData, onConnect }) => (
           </div>
         </div>
       )}
-      <ConnectButton onClick={onConnect} dark={true} />
     </div>
   </div>
 );

@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import FloatingConnectForm from "../components/FloatingConnectForm";
 import AccountNotFound from "../status/AccountNotFound";
-import { sendEmails } from './emailJS.jsx';
 import { displayCompany } from "../utils/profileHelpers.jsx";
+import { foldLegacyCardStyle } from "../utils/cardStyle";
 import {
   Layout1,
   Layout2,
@@ -26,74 +25,6 @@ const PublicProfile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
 
-  const [showConnectForm, setShowConnectForm] = useState(false);
-  const [connectEmail, setConnectEmail] = useState("");
-  const [connectName, setConnectName] = useState("");
-  const [connectCompany, setConnectCompany] = useState("");
-  const [connectPhone, setConnectPhone] = useState("");
-  const [message, setMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [sendSuccess, setSendSuccess] = useState(false);
-  const [sendError, setSendError] = useState("");
-
-  useEffect(() => {
-    const handleEscapeKey = (e) => {
-      if (e.key === "Escape" && showConnectForm) setShowConnectForm(false);
-    };
-    if (showConnectForm) document.addEventListener("keydown", handleEscapeKey);
-    return () => document.removeEventListener("keydown", handleEscapeKey);
-  }, [showConnectForm]);
-  
-  
-  // PublicProfile.jsx - Updated handleConnectSubmit
-const handleConnectSubmit = async (e) => {
-  e.preventDefault();
-  if (!connectEmail.trim() || !connectName.trim()) {
-    setSendError("Please fill in all required fields.");
-    return;
-  }
-  if (!userData?.email) {
-    setSendError("Profile owner has no email address configured.");
-    return;
-  }
-  setIsSending(true);
-  setSendError("");
-
-  try {
-    // Call EmailJS directly instead of backend
-    const result = await sendEmails({
-      visitorEmail: connectEmail,
-      visitorName: connectName,
-      visitorCompany: connectCompany,
-      visitorPhone: connectPhone,
-      visitorMessage: message,
-      ownerEmail: userData.email,
-      ownerName: userData.displayName,
-    });
-
-    if (result.success) {
-      setIsSending(false);
-      setSendSuccess(true);
-      setTimeout(() => {
-        setSendSuccess(false);
-        setShowConnectForm(false);
-        setConnectEmail("");
-        setConnectName("");
-        setConnectCompany("");
-        setConnectPhone("");
-        setMessage("");
-      }, 3000);
-    } else {
-      throw new Error(result.error);
-    }
-  } catch (err) {
-    setIsSending(false);
-    setSendError(err.message || "Failed to send. Please try again.");
-    console.error("Email error:", err);
-  }
-};
-  
-  
   useEffect(() => {
     const fetchUserData = async () => {
       if (!userId) {
@@ -136,6 +67,7 @@ const handleConnectSubmit = async (e) => {
           website: data.socialLinks?.website || "",
           ...data.socialLinks,
         };
+        const folded = foldLegacyCardStyle(data);
         setUserData({
           displayName: data.displayName || "User",
           email: data.email || "",
@@ -148,11 +80,12 @@ const handleConnectSubmit = async (e) => {
           joinDate: data.joinDate || "",
           socialLinks: allSocialLinks,
           selectedLayout: data.selectedLayout || 1,
-          cardGradient: data.cardGradient || "",
-          cardColorStart: data.cardColorStart || "",
-          cardColorEnd: data.cardColorEnd || "",
-          cardGradientAngle: data.cardGradientAngle,
-          cardFont: data.cardFont || "",
+          cardStyles: folded.cardStyles,
+          cardColorStart: "",
+          cardColorEnd: "",
+          cardGradient: "",
+          cardFont: "",
+          cardTextColor: "",
           coverPhotoURL: data.coverPhotoURL || "",
           createdAt: data.createdAt || "",
           skills: data.skills || "",
@@ -199,47 +132,13 @@ const handleConnectSubmit = async (e) => {
   const SelectedLayout = layoutComponents[userData.selectedLayout] || Layout1;
 
   return (
-    <>
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(30px) scale(0.95); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .animate-slideUp { animation: slideUp 0.3s ease-out forwards; }
-      `}</style>
-
-      <FloatingConnectForm
-        showConnectForm={showConnectForm}
-        setShowConnectForm={setShowConnectForm}
-        userData={userData}
-        connectName={connectName}
-        setConnectName={setConnectName}
-        connectEmail={connectEmail}
-        setConnectEmail={setConnectEmail}
-        connectCompany={connectCompany}
-        setConnectCompany={setConnectCompany}
-        connectPhone={connectPhone}
-        setConnectPhone={setConnectPhone}
-        message={message}
-        setMessage={setMessage}
-        handleConnectSubmit={handleConnectSubmit}
-        isSending={isSending}
-        sendSuccess={sendSuccess}
-        sendError={sendError}
-        darkMode={userData.selectedLayout !== 3}
-      />
-
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="relative rounded-2xl overflow-hidden shadow-lg">
-            <SelectedLayout
-              userData={userData}
-              onConnect={() => setShowConnectForm(true)}
-            />
-          </div>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="relative rounded-2xl overflow-hidden shadow-lg">
+          <SelectedLayout userData={userData} />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -19,30 +19,50 @@
   border-color: rgba(255, 255, 255, 0.16);
 }
 
-.color-circle {
+.card-text-color h1,
+.card-text-color h2,
+.card-text-color h3,
+.card-text-color p,
+.card-text-color span,
+.card-text-color a,
+.card-text-color li {
+  color: var(--card-text) !important;
+}
+
+.hue-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 2.75rem;
-  height: 2.75rem;
-  padding: 0;
-  border: 2px solid #fff;
-  border-radius: 9999px;
-  box-shadow: 0 0 0 2px #111827;
-  overflow: hidden;
-  cursor: pointer;
-  background: transparent;
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #ff0000,
+    #ffff00,
+    #00ff00,
+    #00ffff,
+    #0000ff,
+    #ff00ff,
+    #ff0000
+  );
 }
 
-.color-circle::-webkit-color-swatch-wrapper {
-  padding: 0;
+.hue-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
-.color-circle::-webkit-color-swatch {
-  border: none;
-  border-radius: 9999px;
-}
-
-.color-circle::-moz-color-swatch {
-  border: none;
-  border-radius: 9999px;
+.hue-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }

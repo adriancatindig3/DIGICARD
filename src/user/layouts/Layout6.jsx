@@ -1,11 +1,10 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
 import CoverBanner from "../components/CoverBanner";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
-import { cardFill, cardRootProps } from "../utils/cardStyle";
+import { cardFill, cardRootProps, styleForLayout } from "../utils/cardStyle";
 
-const Layout6 = ({ userData, onConnect }) => (
-  <div {...cardRootProps(userData, "#ffffff")}>
+const Layout6 = ({ userData }) => (
+  <div {...cardRootProps(styleForLayout(userData, 6), "#ffffff")}>
     <CoverBanner
       src={userData?.coverPhotoURL}
       alt=""
@@ -114,7 +113,6 @@ const Layout6 = ({ userData, onConnect }) => (
             </div>
           </div>
         )}
-        <ConnectButton onClick={onConnect} dark={false} />
       </div>
     </div>
   </div>
