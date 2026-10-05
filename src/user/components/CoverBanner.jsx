@@ -1,5 +1,5 @@
-// The card banner is 16:5. The photo keeps its own proportions inside
-// that frame so a portrait is not squashed to fill the strip.
+// The card banner is 16:5. Cover fills that frame edge to edge
+// without stretching the photo.
 export const COVER_ASPECT = 16 / 5;
 
 export default function CoverBanner({
@@ -19,7 +19,7 @@ export default function CoverBanner({
           src={src}
           alt={alt}
           className="absolute inset-0 h-full w-full"
-          style={{ objectFit: "contain", objectPosition: "center" }}
+          style={{ objectFit: "cover", objectPosition: "center" }}
         />
       ) : (
         children
