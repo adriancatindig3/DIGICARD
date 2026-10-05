@@ -196,7 +196,7 @@ function Home() {
       >
         <div className="flex items-center gap-2">
           <span className={`font-semibold ${mobileHeaderTextClass}`}>
-            Digical
+            DIGICARD
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -251,7 +251,7 @@ function Home() {
                 <div className="flex items-center gap-3">
                   <div>
                     <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                      Digical
+                      DIGICARD
                     </div>
                     <div className={`text-[9px] ${sidebarSubtextClass}`}>
                       Digital Business Card
@@ -322,7 +322,7 @@ function Home() {
           <div className="flex items-center gap-3">
             <div>
               <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                Digical
+                DIGICARD
               </div>
               <div className={`text-[9px] ${sidebarSubtextClass}`}>
                 Digital Business Card

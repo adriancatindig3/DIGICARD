@@ -171,7 +171,7 @@ function Login() {
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
           <div className="text-center mb-8">
             <p className="text-sm font-semibold tracking-wide text-gray-900">
-              Digical
+              DIGICARD
             </p>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mt-2">
               Welcome back
@@ -284,7 +284,7 @@ function Login() {
 
           {/* Footer */}
           <p className="text-center text-xs text-gray-400 mt-8">
-            © 2026 Digical. All rights reserved.
+            © 2026 DIGICARD. All rights reserved.
           </p>
         </div>
       </motion.div>
@@ -328,7 +328,7 @@ function Login() {
                   1. Eligibility
                 </h3>
                 <p>
-                  Digical is a digital business card. New accounts stay pending
+                  DIGICARD is a digital business card. New accounts stay pending
                   until they are approved.
                 </p>
               </div>
@@ -337,7 +337,7 @@ function Login() {
                   2. Use of Service
                 </h3>
                 <p>
-                  You agree to use Digical in accordance with all applicable laws.
+                  You agree to use DIGICARD in accordance with all applicable laws.
                 </p>
               </div>
               <div>
@@ -411,7 +411,7 @@ function Login() {
                 </h3>
                 <p>
                   When you sign in with Google, we collect your profile picture
-                  and username to personalize your Digical experience.
+                  and username to personalize your DIGICARD experience.
                 </p>
               </div>
               <div>
@@ -420,7 +420,7 @@ function Login() {
                 </h3>
                 <p>
                   Your profile picture and username are used solely to display
-                  your identity within the Digical platform.
+                  your identity within the DIGICARD platform.
                 </p>
               </div>
               <div>

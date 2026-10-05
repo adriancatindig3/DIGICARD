@@ -338,7 +338,7 @@ function ViewQr({ darkMode }) {
               <Smartphone size={13} className={iconTextClass} />
             </div>
             <p className={`text-xs ${textSubClass} leading-relaxed`}>
-              This QR code links directly to your Digical profile. Anyone who
+              This QR code links directly to your DIGICARD profile. Anyone who
               scans it can view your digital identity card instantly.{" "}
               <span
                 className={
@@ -366,7 +366,7 @@ function ViewQr({ darkMode }) {
       </div>
 
       <p className={`text-center text-[10px] ${footerTextClass} mt-6`}>
-        © 2026 Digical · NFC Digital Business Card Platform
+        © 2026 DIGICARD · NFC Digital Business Card Platform
       </p>
     </div>
   );

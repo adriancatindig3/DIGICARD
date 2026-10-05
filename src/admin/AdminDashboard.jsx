@@ -357,7 +357,7 @@ const AdminDashboard = () => {
       >
         <div className="flex items-center gap-2">
           <span className={`font-semibold ${mobileHeaderTextClass}`}>
-            Digical Admin
+            DIGICARD Admin
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -412,7 +412,7 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-3">
                   <div>
                     <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                      Digical Admin
+                      DIGICARD Admin
                     </div>
                     <div className={`text-[9px] ${sidebarSubtextClass}`}>
                       Dashboard
@@ -479,7 +479,7 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-3">
             <div>
               <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                Digical Admin
+                DIGICARD Admin
               </div>
               <div className={`text-[9px] ${sidebarSubtextClass}`}>
                 Dashboard
