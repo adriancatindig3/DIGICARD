@@ -16,6 +16,7 @@ import AdminUsers from "./AdminUsers";
 import AdminAnalytics from "./AdminAnalytics";
 import AdminLogs from "./AdminLogs";
 import AdminSettings from "./AdminSettings";
+import AdminActivationKeys from "./AdminActivationKeys";
 import {
   Moon,
   Sun,
@@ -573,6 +574,10 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === "logs" && <AdminLogs darkMode={darkMode} T={T} />}
+
+          {activeTab === "keys" && (
+            <AdminActivationKeys darkMode={darkMode} currentUser={user} />
+          )}
 
           {activeTab === "settings" && (
             <AdminSettings darkMode={darkMode} T={T} currentUser={user} />

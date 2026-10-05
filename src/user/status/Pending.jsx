@@ -6,9 +6,14 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { isDesignatedAdmin } from "../../admin/adminHelpers";
+import { redeemActivationKey } from "../../shared/activationKeys";
+import { formatActivationKey } from "../../shared/activationKeyFormat";
 
 function Pending() {
   const [isChecking, setIsChecking] = useState(true);
+  const [activationKey, setActivationKey] = useState("");
+  const [activating, setActivating] = useState(false);
+  const [activationError, setActivationError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,6 +69,23 @@ function Pending() {
   const handleSignOut = async () => {
     await signOut(auth);
     navigate("/login", { replace: true });
+  };
+
+  const handleActivate = async (event) => {
+    event.preventDefault();
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      navigate("/login");
+      return;
+    }
+    setActivating(true);
+    setActivationError("");
+    try {
+      await redeemActivationKey(currentUser, activationKey);
+    } catch (err) {
+      setActivationError(err.message || "This activation key is not valid.");
+      setActivating(false);
+    }
   };
 
   if (isChecking) {
@@ -142,6 +164,37 @@ function Pending() {
           </span>
           <p className="text-xs text-gray-400">Waiting for approval</p>
         </div>
+
+        <form onSubmit={handleActivate} className="mb-4">
+          <label
+            htmlFor="activation-key"
+            className="block text-xs font-medium text-gray-500 mb-1.5"
+          >
+            Have an activation key?
+          </label>
+          <input
+            id="activation-key"
+            value={activationKey}
+            onChange={(e) => {
+              setActivationKey(formatActivationKey(e.target.value));
+              setActivationError("");
+            }}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            className="w-full px-3 py-2.5 mb-2 rounded-xl border border-gray-200 text-sm font-mono tracking-wide text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400"
+          />
+          {activationError && (
+            <p className="text-xs text-red-500 mb-2">{activationError}</p>
+          )}
+          <button
+            type="submit"
+            disabled={activating || !activationKey.trim()}
+            className="w-full py-2.5 rounded-xl bg-gray-900 text-sm text-white font-medium hover:bg-gray-700 transition disabled:opacity-40"
+          >
+            {activating ? "Checking key…" : "Activate account"}
+          </button>
+        </form>
 
         {/* Sign out button */}
         <button
