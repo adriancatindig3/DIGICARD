@@ -17,7 +17,7 @@ import {
   Sun,
 } from "lucide-react";
 import { auth, db } from "../../config/firebase";
-import { isDesignatedAdmin } from "../../admin/queueRules";
+import { isDesignatedAdmin } from "../../admin/adminHelpers";
 import UpdateProfile from "./UpdateProfile";
 import ViewQr from "./ViewQr";
 import SelectLayout from "./SelectLayout";

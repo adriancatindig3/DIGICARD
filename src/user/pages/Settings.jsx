@@ -17,7 +17,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { isDesignatedAdmin, refusedAccountChange } from "../../admin/queueRules";
+import { isDesignatedAdmin, refusedAccountChange } from "../../admin/adminHelpers";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut,

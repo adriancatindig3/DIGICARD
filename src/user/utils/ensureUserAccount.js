@@ -3,7 +3,7 @@ import { db } from "../../config/firebase";
 import {
   PROTECTED_ADMIN_EMAIL,
   isDesignatedAdmin,
-} from "../../admin/queueRules";
+} from "../../admin/adminHelpers";
 
 // Creates the same pending account the registration step used to write,
 // so a new login can follow the existing status-page routing.

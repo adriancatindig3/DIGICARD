@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { auth, db } from "../../config/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { isDesignatedAdmin } from "../../admin/queueRules";
+import { isDesignatedAdmin } from "../../admin/adminHelpers";
 
 export const useUserStatus = () => {
   const [status, setStatus] = useState(null);

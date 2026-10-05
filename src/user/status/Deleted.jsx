@@ -5,7 +5,7 @@ import { auth, db } from "../../config/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { isDesignatedAdmin } from "../../admin/queueRules";
+import { isDesignatedAdmin } from "../../admin/adminHelpers";
 
 function Deleted() {
   const [isChecking, setIsChecking] = useState(true);

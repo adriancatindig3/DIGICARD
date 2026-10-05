@@ -17,7 +17,7 @@ import {
   isAdminAccount,
   isDesignatedAdmin,
   routePath,
-} from "../../admin/queueRules";
+} from "../../admin/adminHelpers";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 

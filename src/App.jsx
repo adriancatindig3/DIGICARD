@@ -17,8 +17,8 @@ import Pending from "./user/status/Pending";
 import Rejected from "./user/status/Rejected";
 import Deleted from "./user/status/Deleted";
 import PublicProfile from "./user/pages/PublicProfile";
-import AdminQueue from "./admin/AdminQueue";
-import { isAdminAccount, isDesignatedAdmin } from "./admin/queueRules";
+import AdminDashboard from "./admin/AdminDashboard";
+import { isAdminAccount, isDesignatedAdmin } from "./admin/adminHelpers";
 
 function RouteSpinner() {
   return (
@@ -308,7 +308,7 @@ function App() {
           path="/admin"
           element={
             <AdminRoute>
-              <AdminQueue />
+              <AdminDashboard />
             </AdminRoute>
           }
         />

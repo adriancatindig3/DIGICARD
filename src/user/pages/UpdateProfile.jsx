@@ -15,7 +15,7 @@ import {
   adminLockFields,
   isDesignatedAdmin,
   refusedAccountChange,
-} from "../../admin/queueRules";
+} from "../../admin/adminHelpers";
 import Cropper from "react-easy-crop";
 import {
   ArrowLeft,
