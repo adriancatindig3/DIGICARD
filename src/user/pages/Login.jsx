@@ -40,15 +40,8 @@ function Login() {
 
           if (userDoc.exists()) {
             const status = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
 
-            // Admin goes directly to admin dashboard
-            if (accountType === "admin") {
-              navigate("/admin", { replace: true });
-              return;
-            }
-
-            // Route based on account status for regular users
+            // Route based on account status
             switch (status) {
               case "approved":
                 navigate("/home", { replace: true });
@@ -325,21 +318,9 @@ function Login() {
             </button>
           </div>
 
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-gray-400">
-                
-              </span>
-            </div>
-          </div>
-
           {/* Footer */}
-          <p className="text-center text-xs text-gray-400">
-            © 2026 City College Of Calamba. All rights reserved.
+          <p className="text-center text-xs text-gray-400 mt-8">
+            © 2026 e-CARD. All rights reserved.
           </p>
         </div>
       </motion.div>
@@ -383,9 +364,8 @@ function Login() {
                   1. Eligibility
                 </h3>
                 <p>
-                  e-CARD is available to all City College of Calamba users. New
-                  registrations require admin approval before accessing the
-                  platform.
+                  e-CARD is a digital business card. New accounts stay pending
+                  until they are approved.
                 </p>
               </div>
               <div>
@@ -393,8 +373,7 @@ function Login() {
                   2. Use of Service
                 </h3>
                 <p>
-                  You agree to use e-CARD in accordance with all applicable laws
-                  and the policies of City College of Calamba.
+                  You agree to use e-CARD in accordance with all applicable laws.
                 </p>
               </div>
               <div>
@@ -402,8 +381,8 @@ function Login() {
                   3. Account Approval
                 </h3>
                 <p>
-                  All new accounts require admin approval. The admin reserves
-                  the right to approve or reject any registration.
+                  New accounts remain pending until they are approved. An account
+                  may be approved or rejected.
                 </p>
               </div>
             </div>

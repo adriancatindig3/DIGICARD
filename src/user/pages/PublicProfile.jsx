@@ -4,7 +4,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import FloatingConnectForm from "../components/FloatingConnectForm";
 import AccountNotFound from "../status/AccountNotFound";
-import { sendEmails } from './emailJS.jsx'; // Add this import at the top
+import { sendEmails } from './emailJS.jsx';
+import { displayCompany } from "../utils/profileHelpers.jsx";
 import {
   Layout1,
   Layout2,
@@ -21,7 +22,6 @@ const PublicProfile = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [schoolLogo, setSchoolLogo] = useState("/CCC.png");
   const [accountStatus, setAccountStatus] = useState(null);
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -35,21 +35,6 @@ const PublicProfile = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
   const [sendError, setSendError] = useState("");
-
-  // Fetch school logo from Firestore
-  useEffect(() => {
-    const fetchSchoolLogo = async () => {
-      try {
-        const settingsDoc = await getDoc(doc(db, "settings", "school"));
-        if (settingsDoc.exists() && settingsDoc.data().logoURL) {
-          setSchoolLogo(settingsDoc.data().logoURL);
-        }
-      } catch (error) {
-        console.error("Error fetching school logo:", error);
-      }
-    };
-    fetchSchoolLogo();
-  }, []);
 
   useEffect(() => {
     const handleEscapeKey = (e) => {
@@ -152,9 +137,8 @@ const handleConnectSubmit = async (e) => {
           bio: data.bio || "",
           location: data.location || "",
           phoneNumber: data.phoneNumber || "",
-          occupation: data.occupation || "",
-          company: data.company || "City College of Calamba",
-          companyLogo: "/CCC.png",
+          occupation: data.position || data.occupation || "",
+          company: displayCompany(data.company),
           joinDate: data.joinDate || "",
           socialLinks: allSocialLinks,
           selectedLayout: data.selectedLayout || 1,
@@ -239,7 +223,6 @@ const handleConnectSubmit = async (e) => {
           <div className="relative rounded-2xl overflow-hidden shadow-lg">
             <SelectedLayout
               userData={userData}
-              schoolLogo={schoolLogo}
               onConnect={() => setShowConnectForm(true)}
             />
           </div>

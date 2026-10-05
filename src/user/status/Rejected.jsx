@@ -122,7 +122,7 @@ function Rejected() {
           Your account application has been declined.
         </p>
         <p className="text-gray-400 text-xs text-center leading-relaxed mb-7">
-          Please contact the administrator for more information.
+          Please contact support for more information.
         </p>
 
         {/* Status indicator */}
@@ -151,7 +151,7 @@ function Rejected() {
       </motion.div>
 
       <p className="text-[0.65rem] text-gray-300 mt-5 text-center">
-        © 2026 e-CARD · City College of Calamba
+        © 2026 e-CARD
       </p>
     </div>
   );

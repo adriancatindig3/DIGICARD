@@ -1,8 +1,7 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
-import SchoolLogo from "../components/SchoolLogo";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
-const Layout1 = ({ userData, schoolLogo, onConnect }) => (
+const Layout1 = ({ userData, onConnect }) => (
   <div
     className="w-full font-['Inter'] text-white"
     style={{
@@ -45,19 +44,12 @@ const Layout1 = ({ userData, schoolLogo, onConnect }) => (
             </p>
           )}
           {userData?.company && (
-            <div className="flex items-center gap-1 mt-1">
-              <SchoolLogo
-                schoolLogo={schoolLogo}
-                className="w-3 h-3"
-                style={{ opacity: 0.8 }}
-              />
-              <span
-                className="text-xs truncate"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                {userData.company}
-              </span>
-            </div>
+            <p
+              className="text-xs truncate mt-1"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              {userData.company}
+            </p>
           )}
         </div>
       </div>

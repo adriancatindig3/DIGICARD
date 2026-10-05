@@ -345,7 +345,7 @@ function Settings({ darkMode }) {
           <p
             className={`text-center text-xs ${darkMode ? "text-gray-700" : "text-gray-300"} pb-4`}
           >
-            © 2026 e-CARD · City College of Calamba
+            © 2026 e-CARD
           </p>
         </div>
       </motion.div>

@@ -118,7 +118,7 @@ function Pending() {
           Account Pending Approval
         </h1>
         <p className="text-gray-500 text-sm text-center leading-relaxed mb-6">
-          Your account is currently under review by an administrator.
+          Your account is currently under review.
         </p>
         <p className="text-gray-400 text-xs text-center leading-relaxed mb-7">
           You'll be able to access your dashboard once your account is approved.
@@ -130,7 +130,7 @@ function Pending() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
           </span>
-          <p className="text-xs text-gray-400">Waiting for admin approval</p>
+          <p className="text-xs text-gray-400">Waiting for approval</p>
         </div>
 
         {/* Sign out button */}
@@ -144,13 +144,13 @@ function Pending() {
         {/* Note */}
         <div className="bg-gray-50 rounded-xl p-3">
           <p className="text-[0.7rem] text-gray-400 text-center">
-            Please check back later or contact the administrator.
+            Please check back later.
           </p>
         </div>
       </motion.div>
 
       <p className="text-[0.65rem] text-gray-300 mt-5 text-center">
-        © 2026 e-CARD · City College of Calamba
+        © 2026 e-CARD
       </p>
     </div>
   );

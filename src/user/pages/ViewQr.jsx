@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../config/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import { profileUrl } from "../../config/site";
 import QRCodeLib from "react-qr-code";
 const QRCode = QRCodeLib.default || QRCodeLib.QRCode || QRCodeLib;
 import { Download, Copy, Check, Wifi, Smartphone } from "lucide-react";
@@ -20,11 +21,7 @@ function ViewQr({ darkMode }) {
   const qrFloatingBoxRef = useRef(null);
 
   // hotdog
-  const getProfileUrl = (userId) => {
-    // Get current origin (https://yourdomain.com)
-    const origin = window.location.origin;
-    return `${origin}/profile/${userId}`;
-  };
+  const getProfileUrl = (userId) => profileUrl(userId);
 
   // Function to convert oklch to rgb
   const convertOklchToRgb = (oklchString) => {
@@ -367,8 +364,7 @@ function ViewQr({ darkMode }) {
       </div>
 
       <p className={`text-center text-[10px] ${footerTextClass} mt-6`}>
-        © 2026 e-CARD · NFC Digital Business Card Platform · City College of
-        Calamba
+        © 2026 e-CARD · NFC Digital Business Card Platform
       </p>
     </div>
   );

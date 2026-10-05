@@ -8,14 +8,10 @@ import {
   getDoc,
   updateDoc,
   setDoc,
-  getDocs,
-  collection,
-  query,
-  orderBy,
 } from "firebase/firestore";
 import { uploadImage } from "../../config/cloudinary";
+import { displayCompany } from "../utils/profileHelpers.jsx";
 import Cropper from "react-easy-crop";
-import { useUserRoles } from "../../shared/hooks/useUserRoles";
 import {
   ArrowLeft,
   Save,
@@ -53,7 +49,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
     location: "",
     email: "",
     occupation: "",
-    company: "City College Of Calamba",
+    company: "",
     phoneNumber: "",
     skills: "",
   });
@@ -98,8 +94,6 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
     "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
   const defaultCoverPhoto =
     "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
-  const cccLogo =
-    "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/company-logos/ccc.png";
 
   // Theme-based classes
   const bgClass = darkMode ? "bg-gray-900" : "bg-gray-50";
@@ -133,13 +127,9 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   const modalBgClass = darkMode ? "bg-gray-900" : "bg-white";
   const modalBorderClass = darkMode ? "border-gray-700" : "border-gray-200";
   const cropperBgClass = darkMode ? "bg-gray-800" : "bg-gray-100";
-  const badgeClass = darkMode
-    ? "text-amber-400 bg-amber-900/20 border-amber-800"
-    : "text-amber-600 bg-amber-50 border-amber-200";
   const progressBarBgClass = darkMode ? "bg-gray-700" : "bg-gray-100";
   const progressBarFillClass = darkMode ? "bg-white" : "bg-gray-900";
 
-  const { positionOptions, rolesLoading } = useUserRoles();
   const createImage = (url) =>
     new Promise((resolve, reject) => {
       const image = new Image();
@@ -388,8 +378,12 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             bio: data.bio || "",
             location: data.location || "",
             email: data.email || currentUser.email || "",
-            occupation: data.occupation || data.role || "",
-            company: data.company || "City College Of Calamba",
+            occupation:
+              data.position ||
+              data.occupation ||
+              (data.role && data.role !== "admin" ? data.role : "") ||
+              "",
+            company: displayCompany(data.company),
             phoneNumber: data.phoneNumber || data.phone || "",
             skills: data.skills || "",
           });
@@ -416,7 +410,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             location: "",
             email: currentUser.email || "",
             occupation: "",
-            company: "City College Of Calamba",
+            company: "",
             phoneNumber: "",
             skills: "",
           });
@@ -513,7 +507,8 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
         bio: userData.bio || "",
         location: userData.location || "",
         occupation: userData.occupation || "",
-        company: "City College Of Calamba",
+        position: userData.occupation || "",
+        company: displayCompany(userData.company),
         phoneNumber: userData.phoneNumber || "",
         skills: userData.skills || "",
         socialLinks: socialLinksObj,
@@ -698,20 +693,11 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             >
               {userData.displayName || "Your Name"}
             </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <img
-                src={cccLogo}
-                alt="CCC"
-                className="w-3.5 h-3.5 flex-shrink-0"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-              <p className={`text-xs ${textSubClass} truncate`}>
-                {userData.occupation ? `${userData.occupation} · ` : ""}
-                {userData.company}
-              </p>
-            </div>
+            <p className={`text-xs ${textSubClass} truncate mt-0.5`}>
+              {userData.occupation}
+              {userData.occupation && userData.company ? " · " : ""}
+              {userData.company}
+            </p>
           </div>
         </div>
       </div>
@@ -939,57 +925,14 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             </h3>
           </div>
           <div className="p-4 space-y-3">
-            <div className="relative">
-              {rolesLoading ? (
-                <div
-                  className={`w-full px-3 py-2.5 border ${inputBorderClass} rounded-lg text-sm ${textLightClass} flex items-center gap-2 bg-transparent`}
-                >
-                  <Loader2 size={14} className="animate-spin" /> Loading roles…
-                </div>
-              ) : (
-                <select
-                  name="occupation"
-                  value={userData.occupation}
-                  onChange={handleInputChange}
-                  className={`w-full appearance-none px-3 py-2.5 pr-10 border ${inputBorderClass} rounded-lg text-sm ${inputTextClass} focus:outline-none transition bg-transparent cursor-pointer`}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {!rolesLoading && (
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={textLightClass}
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-              )}
-            </div>
-
-            {!rolesLoading &&
-              userData.occupation &&
-              !positionOptions.find((o) => o.value === userData.occupation) && (
-                <p
-                  className={`text-xs ${badgeClass} rounded-lg px-3 py-2 border`}
-                >
-                  Your current position "{userData.occupation}" is no longer in
-                  the available roles. Please select a new one.
-                </p>
-              )}
+            <input
+              type="text"
+              name="occupation"
+              value={userData.occupation}
+              onChange={handleInputChange}
+              placeholder="Position"
+              className={`w-full px-3 py-2.5 border ${inputBorderClass} rounded-lg text-sm ${inputTextClass} ${placeholderClass} focus:outline-none transition bg-transparent`}
+            />
 
             <textarea
               name="skills"
@@ -1115,8 +1058,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       </form>
 
       <div className={`text-center text-xs ${textLightClass} pb-6`}>
-        © 2026 e-CARD · NFC Digital Business Card Platform · City College of
-        Calamba
+        © 2026 e-CARD · NFC Digital Business Card Platform
       </div>
     </div>
   );

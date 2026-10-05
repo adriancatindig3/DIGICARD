@@ -1,9 +1,8 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
-import SchoolLogo from "../components/SchoolLogo";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
 
-const Layout6 = ({ userData, schoolLogo, onConnect }) => (
+const Layout6 = ({ userData, onConnect }) => (
   <div className="w-full bg-white font-['Inter']">
     <div
       className="h-36 relative overflow-hidden"
@@ -40,10 +39,7 @@ const Layout6 = ({ userData, schoolLogo, onConnect }) => (
           </p>
         )}
         {userData?.company && (
-          <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-            <SchoolLogo schoolLogo={schoolLogo} className="w-4 h-4" />
-            <span>{userData.company}</span>
-          </div>
+          <p className="text-xs text-gray-400 mb-4">{userData.company}</p>
         )}
         {userData?.bio && (
           <p className="text-sm text-gray-600 leading-relaxed mb-4 pb-4 border-b border-gray-100">

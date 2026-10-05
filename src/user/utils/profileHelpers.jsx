@@ -50,6 +50,19 @@ export const getSocialIcon = (platform) => {
   return icons[platform] || <FaLink className="w-3 h-3" />;
 };
 
+const SCHOOL_COMPANY_NAMES = new Set([
+  "city college of calamba",
+  "city college of calamba.",
+  "ccc",
+]);
+
+// Drop the old hardcoded school name so cards don't keep showing it.
+export const displayCompany = (value) => {
+  const trimmed = (value || "").trim();
+  if (SCHOOL_COMPANY_NAMES.has(trimmed.toLowerCase())) return "";
+  return trimmed;
+};
+
 export const getInitials = (name) => {
   if (!name) return "U";
   return name

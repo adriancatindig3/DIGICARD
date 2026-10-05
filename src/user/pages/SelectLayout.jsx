@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { auth, db } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
+import { displayCompany } from "../utils/profileHelpers.jsx";
 import { updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -23,8 +24,6 @@ import {
   FaCheckCircle,
   FaLink,
 } from "react-icons/fa";
-
-const FALLBACK_LOGO = "/CCC.png";
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 const Toast = ({ message, visible, darkMode }) => (
@@ -76,7 +75,6 @@ const SelectLayout = ({ darkMode }) => {
   // Double-tap tracking (mobile)
   const lastTapRef = useRef(0);
 
-  const [schoolLogoURL, setSchoolLogoURL] = useState(FALLBACK_LOGO);
   const navigate = useNavigate();
 
   const bgClass = darkMode ? "bg-gray-900" : "bg-gray-50";
@@ -100,19 +98,6 @@ const SelectLayout = ({ darkMode }) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToastVisible(false), 2200);
   };
-
-  useEffect(() => {
-    const fetchSchoolLogo = async () => {
-      try {
-        const snap = await getDoc(doc(db, "settings", "school"));
-        if (snap.exists() && snap.data().logoURL)
-          setSchoolLogoURL(snap.data().logoURL);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchSchoolLogo();
-  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -140,8 +125,8 @@ const SelectLayout = ({ darkMode }) => {
             bio: data.bio || "",
             location: data.location || "",
             phoneNumber: data.phoneNumber || "",
-            occupation: data.occupation || "",
-            company: "City College of Calamba",
+            occupation: data.position || data.occupation || "",
+            company: displayCompany(data.company),
             socialLinks: {
               facebook: data.socialLinks?.facebook || "",
               twitter: data.socialLinks?.twitter || "",
@@ -164,7 +149,7 @@ const SelectLayout = ({ darkMode }) => {
             location: "",
             phoneNumber: "",
             occupation: "",
-            company: "City College of Calamba",
+            company: "",
             socialLinks: {},
             selectedLayout: 1,
             coverPhotoURL: "",
@@ -240,18 +225,6 @@ const SelectLayout = ({ darkMode }) => {
       .slice(0, 2);
   };
 
-  const SchoolLogo = ({ className = "w-3 h-3", style = {} }) => (
-    <img
-      src={schoolLogoURL}
-      alt="School logo"
-      className={`object-contain ${className}`}
-      style={style}
-      onError={(e) => {
-        e.target.src = FALLBACK_LOGO;
-      }}
-    />
-  );
-
   // ─── LAYOUTS (Layout1 through Layout9 - same as before) ───────────────────
   // ... (keep all Layout1 through Layout9 exactly as they are) ...
 
@@ -299,7 +272,6 @@ const SelectLayout = ({ darkMode }) => {
             )}
             {userData?.company && (
               <div className="flex items-center gap-1 mt-1">
-                <SchoolLogo className="w-3 h-3" style={{ opacity: 0.8 }} />
                 <span
                   className="text-xs truncate"
                   style={{ color: "rgba(255,255,255,0.55)" }}
@@ -501,7 +473,6 @@ const SelectLayout = ({ darkMode }) => {
             )}
             {userData?.company && (
               <div className="flex items-center gap-1 mt-1">
-                <SchoolLogo className="w-3 h-3" style={{ opacity: 0.8 }} />
                 <span
                   className="text-xs"
                   style={{ color: "rgba(255,255,255,0.5)" }}
@@ -694,7 +665,6 @@ const SelectLayout = ({ darkMode }) => {
             )}
             {userData?.company && (
               <div className="flex items-center gap-1 mt-1">
-                <SchoolLogo className="w-3 h-3" />
                 <span className="text-xs text-gray-400">
                   {userData.company}
                 </span>
@@ -860,7 +830,6 @@ const SelectLayout = ({ darkMode }) => {
               className="flex items-center gap-2 text-xs mb-4"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              <SchoolLogo className="w-4 h-4" style={{ opacity: 0.8 }} />
               <span>{userData.company}</span>
             </div>
           )}
@@ -1040,7 +1009,6 @@ const SelectLayout = ({ darkMode }) => {
               className="flex items-center gap-2 text-xs mb-4"
               style={{ color: "#5a8ab0" }}
             >
-              <SchoolLogo className="w-4 h-4" />
               <span>{userData.company}</span>
             </div>
           )}
@@ -1205,7 +1173,6 @@ const SelectLayout = ({ darkMode }) => {
           )}
           {userData?.company && (
             <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-              <SchoolLogo className="w-4 h-4" />
               <span>{userData.company}</span>
             </div>
           )}

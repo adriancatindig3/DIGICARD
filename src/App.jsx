@@ -13,62 +13,9 @@ import SelectLayout from "./user/pages/SelectLayout";
 import Pending from "./user/status/Pending";
 import Rejected from "./user/status/Rejected";
 import Deleted from "./user/status/Deleted";
-import AdminDashboard from "./admin/AdminDashboard";
 import PublicProfile from "./user/pages/PublicProfile";
 
-// AdminRoute - ONLY logged-in users with accountType 'admin' can access
-const AdminRoute = ({ children }) => {
-  const [isAdmin, setIsAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true);
-
-      if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const accountType = userDoc.data()?.accountType;
-          if (accountType === "admin") {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-          }
-        } else {
-          setIsAdmin(false);
-        }
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        setIsAdmin(false);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!isAdmin && !auth.currentUser) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/home" replace />;
-
-  return children;
-};
-
-// Protected route that checks if user is approved and NOT admin
+// Protected route that checks if user is approved
 const ProtectedRoute = ({ children }) => {
   const [status, setStatus] = useState("loading");
 
@@ -81,12 +28,6 @@ const ProtectedRoute = ({ children }) => {
 
           if (userDoc.exists()) {
             const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
 
             if (accountStatus === "approved") {
               setStatus("approved");
@@ -120,7 +61,6 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (status === "unauthenticated") return <Navigate to="/login" replace />;
-  if (status === "admin") return <Navigate to="/admin" replace />;
   if (status === "pending") return <Navigate to="/pending" replace />;
   if (status === "rejected") return <Navigate to="/rejected" replace />;
   if (status === "deleted") return <Navigate to="/deleted" replace />;
@@ -139,9 +79,7 @@ const PublicRoute = ({ children }) => {
           const userDocRef = doc(db, "users", user.uid);
           const userDoc = await getDoc(userDocRef);
 
-          if (userDoc.exists() && userDoc.data()?.accountType === "admin") {
-            setStatus("admin");
-          } else if (!userDoc.exists()) {
+          if (!userDoc.exists()) {
             try {
               await createPendingUser(user);
             } catch (error) {
@@ -172,8 +110,6 @@ const PublicRoute = ({ children }) => {
 
   if (status === "pending") return <Navigate to="/pending" replace />;
   if (status === "authenticated") return <Navigate to="/home" replace />;
-  if (status === "admin") return <Navigate to="/admin" replace />;
-
   return children;
 };
 
@@ -190,12 +126,6 @@ const PendingRoute = () => {
 
           if (userDoc.exists()) {
             const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
 
             if (accountStatus === "approved") {
               setStatus("approved");
@@ -234,7 +164,6 @@ const PendingRoute = () => {
   }
 
   if (status === "unauthenticated") return <Navigate to="/login" replace />;
-  if (status === "admin") return <Navigate to="/admin" replace />;
   if (status === "approved") return <Navigate to="/home" replace />;
   if (status === "rejected") return <Navigate to="/rejected" replace />;
   if (status === "deleted") return <Navigate to="/deleted" replace />;
@@ -255,12 +184,6 @@ const RejectedRoute = () => {
 
           if (userDoc.exists()) {
             const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
 
             if (accountStatus === "rejected") {
               setStatus("rejected");
@@ -294,7 +217,6 @@ const RejectedRoute = () => {
   }
 
   if (status === "unauthenticated") return <Navigate to="/login" replace />;
-  if (status === "admin") return <Navigate to="/admin" replace />;
   if (status === "approved") return <Navigate to="/home" replace />;
   if (status === "pending") return <Navigate to="/pending" replace />;
   if (status === "deleted") return <Navigate to="/deleted" replace />;
@@ -315,12 +237,6 @@ const DeletedRoute = () => {
 
           if (userDoc.exists()) {
             const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
 
             if (accountStatus === "deleted") {
               setStatus("deleted");
@@ -358,7 +274,6 @@ const DeletedRoute = () => {
     );
   }
 
-  if (status === "admin") return <Navigate to="/admin" replace />;
   if (status === "approved") return <Navigate to="/home" replace />;
   if (status === "pending") return <Navigate to="/pending" replace />;
   if (status === "rejected") return <Navigate to="/rejected" replace />;
@@ -388,15 +303,8 @@ function App() {
         <Route path="/rejected" element={<RejectedRoute />} />
         <Route path="/deleted" element={<DeletedRoute />} />
 
-        {/* ADMIN ONLY ROUTE - Protected */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
+        {/* Former admin dashboard. Status routing decides where an account goes. */}
+        <Route path="/admin" element={<Navigate to="/home" replace />} />
 
         {/* USER ROUTES */}
         <Route

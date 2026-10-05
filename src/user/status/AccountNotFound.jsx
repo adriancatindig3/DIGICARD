@@ -77,7 +77,7 @@ function AccountNotFound() {
       </motion.div>
 
       <p className="text-[0.65rem] text-gray-300 mt-5 text-center">
-        © 2026 e-CARD · City College of Calamba
+        © 2026 e-CARD
       </p>
     </div>
   );
