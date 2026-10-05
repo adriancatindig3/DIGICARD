@@ -1,12 +1,8 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
-import SchoolLogo from "../components/SchoolLogo";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
-const Layout2 = ({ userData, schoolLogo, onConnect }) => (
-  <div
-    className="w-full font-['Inter'] text-white"
-    style={{ background: "#0f1623" }}
-  >
+import { cardRootProps, styleForLayout } from "../utils/cardStyle";
+const Layout2 = ({ userData }) => (
+  <div {...cardRootProps(styleForLayout(userData, 2), "#0f1623", "text-white")}>
     <div className="pt-6 pb-4 px-4">
       <div className="flex items-center gap-4 mb-4">
         <div
@@ -43,19 +39,9 @@ const Layout2 = ({ userData, schoolLogo, onConnect }) => (
             </p>
           )}
           {userData?.company && (
-            <div className="flex items-center gap-1 mt-1">
-              <SchoolLogo
-                schoolLogo={schoolLogo}
-                className="w-3 h-3"
-                style={{ opacity: 0.8 }}
-              />
-              <span
-                className="text-xs"
-                style={{ color: "rgba(255,255,255,0.5)" }}
-              >
-                {userData.company}
-              </span>
-            </div>
+            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+              {userData.company}
+            </p>
           )}
         </div>
       </div>
@@ -201,7 +187,6 @@ const Layout2 = ({ userData, schoolLogo, onConnect }) => (
           </div>
         </div>
       )}
-      <ConnectButton onClick={onConnect} dark={true} />
     </div>
   </div>
 );

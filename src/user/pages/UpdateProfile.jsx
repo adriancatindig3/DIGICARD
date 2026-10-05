@@ -1,21 +1,24 @@
 // UpdateProfile.jsx - with dark mode support
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import {
-  doc,
   getDoc,
   updateDoc,
   setDoc,
-  getDocs,
-  collection,
-  query,
-  orderBy,
 } from "firebase/firestore";
 import { uploadImage } from "../../config/cloudinary";
+import { displayCompany } from "../utils/profileHelpers.jsx";
+import {
+  adminLockFields,
+  isDesignatedAdmin,
+  refusedAccountChange,
+} from "../../admin/adminHelpers";
 import Cropper from "react-easy-crop";
-import { useUserRoles } from "../../shared/hooks/useUserRoles";
+import CoverBanner, { COVER_ASPECT } from "../components/CoverBanner";
+import { getCroppedImg } from "../utils/cropImage";
+import { canonicalUserRef } from "../utils/ensureUserAccount";
 import {
   ArrowLeft,
   Save,
@@ -53,7 +56,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
     location: "",
     email: "",
     occupation: "",
-    company: "City College Of Calamba",
+    company: "",
     phoneNumber: "",
     skills: "",
   });
@@ -82,6 +85,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   const [coverCrop, setCoverCrop] = useState({ x: 0, y: 0 });
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverCroppedAreaPixels, setCoverCroppedAreaPixels] = useState(null);
+  const coverCropPixelsRef = useRef(null);
   const [coverImageToCrop, setCoverImageToCrop] = useState(null);
   const [isSavingCoverPic, setIsSavingCoverPic] = useState(false);
 
@@ -95,11 +99,9 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   const navigate = useNavigate();
 
   const defaultProfilePic =
-    "https://res.cloudinary.com/dduu3qj8q/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
+    "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
   const defaultCoverPhoto =
-    "https://res.cloudinary.com/dduu3qj8q/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
-  const cccLogo =
-    "https://res.cloudinary.com/dduu3qj8q/image/upload/v1770705831/users/company-logos/ccc.png";
+    "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
 
   // Theme-based classes
   const bgClass = darkMode ? "bg-gray-900" : "bg-gray-50";
@@ -133,48 +135,15 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   const modalBgClass = darkMode ? "bg-gray-900" : "bg-white";
   const modalBorderClass = darkMode ? "border-gray-700" : "border-gray-200";
   const cropperBgClass = darkMode ? "bg-gray-800" : "bg-gray-100";
-  const badgeClass = darkMode
-    ? "text-amber-400 bg-amber-900/20 border-amber-800"
-    : "text-amber-600 bg-amber-50 border-amber-200";
   const progressBarBgClass = darkMode ? "bg-gray-700" : "bg-gray-100";
   const progressBarFillClass = darkMode ? "bg-white" : "bg-gray-900";
 
-  const { positionOptions, rolesLoading } = useUserRoles();
-  const createImage = (url) =>
-    new Promise((resolve, reject) => {
-      const image = new Image();
-      image.addEventListener("load", () => resolve(image));
-      image.addEventListener("error", (error) => reject(error));
-      image.setAttribute("crossOrigin", "anonymous");
-      image.src = url;
-    });
-
-  const getCroppedImg = async (imageSrc, pixelCrop) => {
-    const image = await createImage(imageSrc);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
-    ctx.drawImage(
-      image,
-      pixelCrop.x,
-      pixelCrop.y,
-      pixelCrop.width,
-      pixelCrop.height,
-      0,
-      0,
-      pixelCrop.width,
-      pixelCrop.height,
-    );
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.95);
-    });
-  };
-
   const onProfileCropComplete = (_, croppedAreaPixels) =>
     setProfileCroppedAreaPixels(croppedAreaPixels);
-  const onCoverCropComplete = (_, croppedAreaPixels) =>
+  const onCoverCropComplete = (_, croppedAreaPixels) => {
+    coverCropPixelsRef.current = croppedAreaPixels;
     setCoverCroppedAreaPixels(croppedAreaPixels);
+  };
 
   const autoSaveProfilePicture = async (croppedFile) => {
     try {
@@ -182,7 +151,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       if (!currentUser) return false;
       const result = await uploadImage(croppedFile, "users/profile-photos");
       const newPhotoUrl = result.url;
-      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocRef = await canonicalUserRef(currentUser);
       await updateDoc(userDocRef, {
         photoURL: newPhotoUrl,
         profilePic: newPhotoUrl,
@@ -206,7 +175,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       if (!currentUser) return false;
       const result = await uploadImage(croppedFile, "users/cover-photos");
       const newCoverUrl = result.url;
-      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocRef = await canonicalUserRef(currentUser);
       await updateDoc(userDocRef, {
         coverPhotoURL: newCoverUrl,
         coverPhoto: newCoverUrl,
@@ -248,12 +217,15 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       setProfileImageToCrop,
       setShowProfileCropper,
     );
-  const handleCoverFileChange = (e) =>
+  const handleCoverFileChange = (e) => {
+    coverCropPixelsRef.current = null;
+    setCoverCroppedAreaPixels(null);
     handleFileChange(
       e.target.files[0],
       setCoverImageToCrop,
       setShowCoverCropper,
     );
+  };
 
   const handleProfileCropSave = async () => {
     if (!profileCroppedAreaPixels || !profileImageToCrop) return;
@@ -286,14 +258,12 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   };
 
   const handleCoverCropSave = async () => {
-    if (!coverCroppedAreaPixels || !coverImageToCrop) return;
+    const pixelCrop = coverCropPixelsRef.current || coverCroppedAreaPixels;
+    if (!pixelCrop || !coverImageToCrop) return;
     setIsSavingCoverPic(true);
     setError("");
     try {
-      const croppedBlob = await getCroppedImg(
-        coverImageToCrop,
-        coverCroppedAreaPixels,
-      );
+      const croppedBlob = await getCroppedImg(coverImageToCrop, pixelCrop);
       const croppedFile = new File([croppedBlob], "cropped-cover.jpg", {
         type: "image/jpeg",
       });
@@ -379,7 +349,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
           navigate("/login");
           return;
         }
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocRef = await canonicalUserRef(currentUser);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -388,8 +358,12 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             bio: data.bio || "",
             location: data.location || "",
             email: data.email || currentUser.email || "",
-            occupation: data.occupation || data.role || "",
-            company: data.company || "City College Of Calamba",
+            occupation:
+              data.position ||
+              data.occupation ||
+              (data.role && data.role !== "admin" ? data.role : "") ||
+              "",
+            company: displayCompany(data.company),
             phoneNumber: data.phoneNumber || data.phone || "",
             skills: data.skills || "",
           });
@@ -416,7 +390,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             location: "",
             email: currentUser.email || "",
             occupation: "",
-            company: "City College Of Calamba",
+            company: "",
             phoneNumber: "",
             skills: "",
           });
@@ -513,19 +487,26 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
         bio: userData.bio || "",
         location: userData.location || "",
         occupation: userData.occupation || "",
-        company: "City College Of Calamba",
+        position: userData.occupation || "",
+        company: displayCompany(userData.company),
         phoneNumber: userData.phoneNumber || "",
         skills: userData.skills || "",
         socialLinks: socialLinksObj,
         updatedAt: new Date().toISOString(),
       };
 
-      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocRef = await canonicalUserRef(currentUser);
       const userDoc = await getDoc(userDocRef);
+      const refused = refusedAccountChange(
+        { ...(userDoc.data() || {}), email: currentUser.email, uid: currentUser.uid },
+        updateData,
+      );
+      if (refused) throw new Error(refused);
 
       if (!userDoc.exists()) {
         await setDoc(userDocRef, {
           ...updateData,
+          ...(isDesignatedAdmin(currentUser) ? adminLockFields() : {}),
           email: currentUser.email || "",
           createdAt: new Date().toISOString(),
           uid: currentUser.uid,
@@ -535,7 +516,13 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
           coverPhoto: currentCoverURL,
         });
       } else {
-        await updateDoc(userDocRef, updateData);
+        await updateDoc(
+          userDocRef,
+          isDesignatedAdmin(currentUser) ||
+            isDesignatedAdmin(userDoc.data())
+            ? { ...updateData, ...adminLockFields() }
+            : updateData,
+        );
       }
 
       setUploadProgress(100);
@@ -597,7 +584,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
         {/* Cover photo */}
         <div
           onClick={() => coverPhotoInputRef.current?.click()}
-          className="relative h-28 bg-gradient-to-br from-gray-800 to-gray-600 cursor-pointer overflow-hidden group"
+          className="relative cursor-pointer overflow-hidden group"
         >
           {isSavingCoverPic && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
@@ -605,13 +592,14 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             </div>
           )}
 
-          {coverPhotoPreview && coverPhotoPreview !== defaultCoverPhoto && (
-            <img
-              src={coverPhotoPreview}
-              alt="Cover"
-              className="w-full h-full object-cover"
-            />
-          )}
+          <CoverBanner
+            src={
+              coverPhotoPreview && coverPhotoPreview !== defaultCoverPhoto
+                ? coverPhotoPreview
+                : ""
+            }
+            className="bg-gradient-to-br from-gray-800 to-gray-600"
+          />
 
           {/* Hover overlay - always visible but more prominent on hover */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-center justify-center">
@@ -698,20 +686,11 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             >
               {userData.displayName || "Your Name"}
             </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <img
-                src={cccLogo}
-                alt="CCC"
-                className="w-3.5 h-3.5 flex-shrink-0"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-              <p className={`text-xs ${textSubClass} truncate`}>
-                {userData.occupation ? `${userData.occupation} · ` : ""}
-                {userData.company}
-              </p>
-            </div>
+            <p className={`text-xs ${textSubClass} truncate mt-0.5`}>
+              {userData.occupation}
+              {userData.occupation && userData.company ? " · " : ""}
+              {userData.company}
+            </p>
           </div>
         </div>
       </div>
@@ -802,7 +781,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
                 <h3
                   className={`font-semibold ${textClass} text-sm flex items-center gap-2`}
                 >
-                  <Move size={16} /> Position cover photo (16:9)
+                  <Move size={16} /> Position cover photo (16:5)
                 </h3>
                 <button
                   onClick={() => setShowCoverCropper(false)}
@@ -816,9 +795,10 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
                   image={coverImageToCrop}
                   crop={coverCrop}
                   zoom={coverZoom}
-                  aspect={16 / 9}
+                  aspect={COVER_ASPECT}
                   onCropChange={setCoverCrop}
                   onZoomChange={setCoverZoom}
+                  onCropAreaChange={onCoverCropComplete}
                   onCropComplete={onCoverCropComplete}
                   showGrid={true}
                 />
@@ -939,57 +919,14 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             </h3>
           </div>
           <div className="p-4 space-y-3">
-            <div className="relative">
-              {rolesLoading ? (
-                <div
-                  className={`w-full px-3 py-2.5 border ${inputBorderClass} rounded-lg text-sm ${textLightClass} flex items-center gap-2 bg-transparent`}
-                >
-                  <Loader2 size={14} className="animate-spin" /> Loading roles…
-                </div>
-              ) : (
-                <select
-                  name="occupation"
-                  value={userData.occupation}
-                  onChange={handleInputChange}
-                  className={`w-full appearance-none px-3 py-2.5 pr-10 border ${inputBorderClass} rounded-lg text-sm ${inputTextClass} focus:outline-none transition bg-transparent cursor-pointer`}
-                >
-                  <option value="">Select position</option>
-                  {positionOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {!rolesLoading && (
-                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={textLightClass}
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-              )}
-            </div>
-
-            {!rolesLoading &&
-              userData.occupation &&
-              !positionOptions.find((o) => o.value === userData.occupation) && (
-                <p
-                  className={`text-xs ${badgeClass} rounded-lg px-3 py-2 border`}
-                >
-                  Your current position "{userData.occupation}" is no longer in
-                  the available roles. Please select a new one.
-                </p>
-              )}
+            <input
+              type="text"
+              name="occupation"
+              value={userData.occupation}
+              onChange={handleInputChange}
+              placeholder="Position"
+              className={`w-full px-3 py-2.5 border ${inputBorderClass} rounded-lg text-sm ${inputTextClass} ${placeholderClass} focus:outline-none transition bg-transparent`}
+            />
 
             <textarea
               name="skills"
@@ -1115,8 +1052,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       </form>
 
       <div className={`text-center text-xs ${textLightClass} pb-6`}>
-        © 2026 e-CARD · NFC Digital Business Card Platform · City College of
-        Calamba
+        © 2026 DIGICARD · NFC Digital Business Card Platform
       </div>
     </div>
   );

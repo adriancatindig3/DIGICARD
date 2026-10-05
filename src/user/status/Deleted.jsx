@@ -1,10 +1,11 @@
 // src/user/pages/Deleted.jsx - with real-time status listener
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { auth, db } from "../../config/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
+import { isDesignatedAdmin } from "../../admin/adminHelpers";
+import { subscribeCanonicalAccount } from "../utils/ensureUserAccount";
 
 function Deleted() {
   const [isChecking, setIsChecking] = useState(true);
@@ -18,13 +19,19 @@ function Deleted() {
       return;
     }
 
-    const userDocRef = doc(db, "users", currentUser.uid);
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
 
-    // Real-time listener for status changes
-    const unsubscribe = onSnapshot(
-      userDocRef,
+    return subscribeCanonicalAccount(
+      currentUser,
       async (doc) => {
         if (doc.exists()) {
+          if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
+            navigate("/admin", { replace: true });
+            return;
+          }
           const status = doc.data()?.accountStatus;
 
           // If status changes to approved, redirect to home
@@ -39,6 +46,8 @@ function Deleted() {
           else if (status === "rejected") {
             navigate("/rejected", { replace: true });
           }
+        } else if (isDesignatedAdmin(auth.currentUser)) {
+          navigate("/admin", { replace: true });
         } else {
           // Document doesn't exist, sign out
           await signOut(auth);
@@ -51,8 +60,6 @@ function Deleted() {
         setIsChecking(false);
       },
     );
-
-    return () => unsubscribe();
   }, [navigate]);
 
   const handleSignOut = async () => {
@@ -128,7 +135,7 @@ function Deleted() {
           Your account has been permanently removed from our system.
         </p>
         <p className="text-gray-400 text-xs text-center leading-relaxed mb-7">
-          If you believe this is a mistake, please contact the administrator.
+          If you believe this is a mistake, please contact support.
         </p>
 
         {/* Status indicator */}
@@ -157,7 +164,7 @@ function Deleted() {
       </motion.div>
 
       <p className="text-[0.65rem] text-gray-300 mt-5 text-center">
-        © 2026 e-CARD · City College of Calamba
+        © 2026 DIGICARD
       </p>
     </div>
   );

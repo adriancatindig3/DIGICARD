@@ -1,32 +1,25 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
-import SchoolLogo from "../components/SchoolLogo";
+import CoverBanner from "../components/CoverBanner";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardFill, cardRootProps, styleForLayout } from "../utils/cardStyle";
 
-const Layout4 = ({ userData, schoolLogo, onConnect }) => (
+const Layout4 = ({ userData }) => (
   <div
-    className="w-full font-['Inter'] text-white"
-    style={{
-      background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
-    }}
+    {...cardRootProps(
+      styleForLayout(userData, 4),
+      "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
+      "text-white",
+    )}
   >
-    <div className="h-36 relative overflow-hidden">
-      {userData?.coverPhotoURL ? (
-        <img
-          src={userData.coverPhotoURL}
-          alt="Cover"
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div
-          style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
-          className="w-full h-full"
-        />
-      )}
-    </div>
+    <CoverBanner src={userData?.coverPhotoURL}>
+      <div
+        style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
+        className="h-full w-full"
+      />
+    </CoverBanner>
     <div
       className="px-6 py-4 relative"
-      style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+      style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
     >
       <div
         className="w-20 h-20 rounded-2xl overflow-hidden absolute -top-10 left-6 border-4"
@@ -56,17 +49,12 @@ const Layout4 = ({ userData, schoolLogo, onConnect }) => (
           </p>
         )}
         {userData?.company && (
-          <div
-            className="flex items-center gap-2 text-xs mb-4"
+          <p
+            className="text-xs mb-4"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            <SchoolLogo
-              schoolLogo={schoolLogo}
-              className="w-4 h-4"
-              style={{ opacity: 0.8 }}
-            />
-            <span>{userData.company}</span>
-          </div>
+            {userData.company}
+          </p>
         )}
         {userData?.bio && (
           <p
@@ -183,7 +171,6 @@ const Layout4 = ({ userData, schoolLogo, onConnect }) => (
             </div>
           </div>
         )}
-        <ConnectButton onClick={onConnect} dark={true} />
       </div>
     </div>
   </div>

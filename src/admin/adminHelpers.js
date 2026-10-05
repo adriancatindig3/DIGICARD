@@ -11,8 +11,94 @@ import {
   ClipboardList,
   Settings,
   Activity,
+  KeyRound,
 } from "lucide-react";
 import React from "react";
+
+export const PROTECTED_ADMIN_ID = "GMKlUNCjV7XOCfIDhbMgZ1jrywH3";
+export const PROTECTED_ADMIN_EMAIL = "adriancatindig3@gmail.com";
+
+const PROTECTED_ADMIN_IDS = new Set([
+  PROTECTED_ADMIN_ID,
+  "GcYpHG3jgNUM28R1YNZMECGvHg83",
+]);
+
+export function isAdminAccount(account) {
+  if (!account) return false;
+  return account.accountType === "admin" || account.role === "admin";
+}
+
+// Email is the permanent match. A later Google sign-in can use a new uid.
+export function isDesignatedAdmin(account) {
+  if (!account) return false;
+  const email = String(account.email || "").toLowerCase();
+  const id = account.id || account.uid || "";
+  return email === PROTECTED_ADMIN_EMAIL || PROTECTED_ADMIN_IDS.has(id);
+}
+
+export function adminLockFields() {
+  return {
+    accountType: "admin",
+    role: "admin",
+    accountStatus: "approved",
+    status: "approved",
+    isActive: true,
+  };
+}
+
+export function refusedAccountChange(account, changes = {}) {
+  const id = account?.id || account?.uid || "";
+  const designated =
+    isDesignatedAdmin(account) ||
+    isDesignatedAdmin({
+      email: changes.email,
+      id,
+      uid: account?.uid,
+    });
+  if (!designated) return "";
+
+  if (changes.delete === true) {
+    return "This admin account cannot be deleted.";
+  }
+  if (changes.accountType != null && changes.accountType !== "admin") {
+    return "This admin account cannot be demoted.";
+  }
+  if (changes.role != null && changes.role !== "admin") {
+    return "This admin account cannot be demoted.";
+  }
+  const nextStatus = changes.accountStatus ?? changes.status;
+  if (nextStatus != null && nextStatus !== "approved") {
+    return "This admin account cannot be rejected or deactivated.";
+  }
+  if (changes.isActive === false) {
+    return "This admin account cannot be deactivated.";
+  }
+  return "";
+}
+
+export function routeStatus(account) {
+  if (isDesignatedAdmin(account) || isAdminAccount(account)) return "admin";
+
+  const status = account?.accountStatus || account?.status;
+  if (
+    status === "approved" ||
+    status === "rejected" ||
+    status === "deleted"
+  ) {
+    return status;
+  }
+
+  return "pending";
+}
+
+export function routePath(account) {
+  const status = routeStatus(account);
+  if (status === "admin") return "/admin";
+  if (status === "approved") return "/home";
+  if (status === "rejected") return "/rejected";
+  if (status === "deleted") return "/deleted";
+  return "/pending";
+}
 
 // ─── Helper Functions ──────────────────────────────────────────────────────
 export const getInitials = (name) => {
@@ -176,6 +262,27 @@ export const ACTION_LOG_CONFIG = {
     icon: React.createElement(Trash2, { size: 11 }),
     text: "Deleted",
   },
+  GENERATE_KEYS: {
+    color: "#3B82F6",
+    bg: "rgba(59, 130, 246, 0.1)",
+    border: "rgba(59, 130, 246, 0.2)",
+    icon: React.createElement(KeyRound, { size: 11 }),
+    text: "Keys Generated",
+  },
+  REVOKE_KEY: {
+    color: "#F59E0B",
+    bg: "rgba(245, 158, 11, 0.1)",
+    border: "rgba(245, 158, 11, 0.2)",
+    icon: React.createElement(KeyRound, { size: 11 }),
+    text: "Key Revoked",
+  },
+  ACTIVATE: {
+    color: "#10B981",
+    bg: "rgba(16, 185, 129, 0.1)",
+    border: "rgba(16, 185, 129, 0.2)",
+    icon: React.createElement(CheckCircle, { size: 11 }),
+    text: "Activated",
+  },
   UPDATE_LOGO: {
     color: "#3B82F6",
     bg: "rgba(59, 130, 246, 0.1)",
@@ -256,6 +363,11 @@ export const TABS = [
     id: "logs",
     icon: React.createElement(ClipboardList, { size: 16 }),
     label: "Activity Logs",
+  },
+  {
+    id: "keys",
+    icon: React.createElement(KeyRound, { size: 16 }),
+    label: "Activation Keys",
   },
   {
     id: "settings",

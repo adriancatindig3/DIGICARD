@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { updateDoc, doc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { applyAccountStatus } from "../user/utils/ensureUserAccount";
 import {
   FilterPill,
   STATUS_CONFIG,
   getInitials,
   formatDate,
   logAdminAction,
+  isDesignatedAdmin,
+  refusedAccountChange,
 } from "./adminHelpers";
 import {
   Search,
@@ -94,15 +97,43 @@ const AdminUsers = ({
     }
   };
 
+  const blockProtectedWrite = async (userId, changes) => {
+    const listed =
+      users.find((u) => u.id === userId) ||
+      (selectedUser?.id === userId ? selectedUser : null);
+    const snap = await getDoc(doc(db, "users", userId));
+    const fresh = snap.exists()
+      ? { id: snap.id, ...snap.data() }
+      : { id: userId, email: listed?.email };
+    if (isDesignatedAdmin(listed) || isDesignatedAdmin(fresh)) {
+      return "This admin account cannot be changed.";
+    }
+    return refusedAccountChange(fresh, changes);
+  };
+
   const handleApproveUser = async (userId) => {
     setActionLoading(userId);
     try {
-      await updateDoc(doc(db, "users", userId), {
+      const blocked = await blockProtectedWrite(userId, {
         accountStatus: "approved",
+        status: "approved",
         isActive: true,
-        approvedAt: new Date().toISOString(),
-        approvedBy: currentUser?.email || "admin",
       });
+      if (blocked) {
+        console.error(blocked);
+        return;
+      }
+      await applyAccountStatus(
+        userId,
+        selectedUser?.email,
+        {
+          accountStatus: "approved",
+          isActive: true,
+          approvedAt: new Date().toISOString(),
+          approvedBy: currentUser?.email || "admin",
+        },
+        selectedUser?.id === userId ? selectedUser.siblingIds : [],
+      );
       await logAdminAction(
         currentUser?.email,
         "APPROVE",
@@ -123,12 +154,26 @@ const AdminUsers = ({
   const handleRejectUser = async (userId) => {
     setActionLoading(userId);
     try {
-      await updateDoc(doc(db, "users", userId), {
+      const blocked = await blockProtectedWrite(userId, {
         accountStatus: "rejected",
+        status: "rejected",
         isActive: false,
-        rejectedAt: new Date().toISOString(),
-        rejectedBy: currentUser?.email || "admin",
       });
+      if (blocked) {
+        console.error(blocked);
+        return;
+      }
+      await applyAccountStatus(
+        userId,
+        selectedUser?.email,
+        {
+          accountStatus: "rejected",
+          isActive: false,
+          rejectedAt: new Date().toISOString(),
+          rejectedBy: currentUser?.email || "admin",
+        },
+        selectedUser?.id === userId ? selectedUser.siblingIds : [],
+      );
       await logAdminAction(
         currentUser?.email,
         "REJECT",
@@ -149,12 +194,27 @@ const AdminUsers = ({
   const handleDeleteUser = async (userId) => {
     setActionLoading(userId);
     try {
-      await updateDoc(doc(db, "users", userId), {
+      const blocked = await blockProtectedWrite(userId, {
+        delete: true,
         accountStatus: "deleted",
+        status: "deleted",
         isActive: false,
-        deletedAt: new Date().toISOString(),
-        deletedBy: currentUser?.email || "admin",
       });
+      if (blocked) {
+        console.error(blocked);
+        return;
+      }
+      await applyAccountStatus(
+        userId,
+        selectedUser?.email,
+        {
+          accountStatus: "deleted",
+          isActive: false,
+          deletedAt: new Date().toISOString(),
+          deletedBy: currentUser?.email || "admin",
+        },
+        selectedUser?.id === userId ? selectedUser.siblingIds : [],
+      );
       await logAdminAction(
         currentUser?.email,
         "DELETE",
@@ -178,14 +238,14 @@ const AdminUsers = ({
     setShowConfirmModal(true);
   };
   const handleConfirmAction = () => {
-    if (!selectedUser) return;
+    if (!selectedUser || isDesignatedAdmin(selectedUser)) return;
     if (actionType === "approve") handleApproveUser(selectedUser.id);
     else if (actionType === "reject") handleRejectUser(selectedUser.id);
     else if (actionType === "delete") handleDeleteUser(selectedUser.id);
   };
 
   const filteredUsers = users.filter((u) => {
-    if (u.role === "admin") return false;
+    if (u.role === "admin" || isDesignatedAdmin(u)) return false;
     const matchSearch =
       !searchTerm ||
       u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||

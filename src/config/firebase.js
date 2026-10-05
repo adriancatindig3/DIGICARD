@@ -3,12 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAQHsnOjA4toHxs3uo7N46R0u1MpJFh4Js",
+  authDomain: "e-card-72671.firebaseapp.com",
+  projectId: "e-card-72671",
+  storageBucket: "e-card-72671.firebasestorage.app",
+  messagingSenderId: "1029901355444",
+  appId: "1:1029901355444:web:c4bb7c910c16ffc0134ae1",
+  measurementId: "G-4QWGR6X1NS",
 };
 
 // Initialize Firebase
@@ -20,5 +21,3 @@ export const db = getFirestore(app);
 // storage removed - using Cloudinary instead
 
 export default app;
-
-

@@ -1,10 +1,11 @@
 // src/user/pages/Rejected.jsx - with real-time status listener and sign out
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { auth, db } from "../../config/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
+import { isDesignatedAdmin } from "../../admin/adminHelpers";
+import { subscribeCanonicalAccount } from "../utils/ensureUserAccount";
 
 function Rejected() {
   const [isChecking, setIsChecking] = useState(true);
@@ -18,13 +19,19 @@ function Rejected() {
       return;
     }
 
-    const userDocRef = doc(db, "users", currentUser.uid);
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
 
-    // Real-time listener for status changes
-    const unsubscribe = onSnapshot(
-      userDocRef,
+    return subscribeCanonicalAccount(
+      currentUser,
       (doc) => {
         if (doc.exists()) {
+          if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
+            navigate("/admin", { replace: true });
+            return;
+          }
           const status = doc.data()?.accountStatus;
 
           // If status changes to approved, redirect to home
@@ -47,8 +54,6 @@ function Rejected() {
         setIsChecking(false);
       },
     );
-
-    return () => unsubscribe();
   }, [navigate]);
 
   const handleSignOut = async () => {
@@ -122,7 +127,7 @@ function Rejected() {
           Your account application has been declined.
         </p>
         <p className="text-gray-400 text-xs text-center leading-relaxed mb-7">
-          Please contact the administrator for more information.
+          Please contact support for more information.
         </p>
 
         {/* Status indicator */}
@@ -151,7 +156,7 @@ function Rejected() {
       </motion.div>
 
       <p className="text-[0.65rem] text-gray-300 mt-5 text-center">
-        © 2026 e-CARD · City College of Calamba
+        © 2026 DIGICARD
       </p>
     </div>
   );

@@ -1,22 +1,15 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
-import SchoolLogo from "../components/SchoolLogo";
+import CoverBanner from "../components/CoverBanner";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardFill, cardRootProps, styleForLayout } from "../utils/cardStyle";
 
-const Layout6 = ({ userData, schoolLogo, onConnect }) => (
-  <div className="w-full bg-white font-['Inter']">
-    <div
-      className="h-36 relative overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #1f2937, #111827)" }}
-    >
-      {userData?.coverPhotoURL && (
-        <img
-          src={userData.coverPhotoURL}
-          alt=""
-          className="w-full h-full object-cover"
-        />
-      )}
-    </div>
+const Layout6 = ({ userData }) => (
+  <div {...cardRootProps(styleForLayout(userData, 6), "#ffffff")}>
+    <CoverBanner
+      src={userData?.coverPhotoURL}
+      alt=""
+      style={{ background: cardFill("linear-gradient(135deg, #1f2937, #111827)") }}
+    />
     <div className="px-6 py-4 relative bg-white">
       <div
         className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-white shadow-lg absolute -top-10 left-6"
@@ -40,10 +33,7 @@ const Layout6 = ({ userData, schoolLogo, onConnect }) => (
           </p>
         )}
         {userData?.company && (
-          <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-            <SchoolLogo schoolLogo={schoolLogo} className="w-4 h-4" />
-            <span>{userData.company}</span>
-          </div>
+          <p className="text-xs text-gray-400 mb-4">{userData.company}</p>
         )}
         {userData?.bio && (
           <p className="text-sm text-gray-600 leading-relaxed mb-4 pb-4 border-b border-gray-100">
@@ -123,7 +113,6 @@ const Layout6 = ({ userData, schoolLogo, onConnect }) => (
             </div>
           </div>
         )}
-        <ConnectButton onClick={onConnect} dark={false} />
       </div>
     </div>
   </div>

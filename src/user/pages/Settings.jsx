@@ -17,6 +17,11 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { isDesignatedAdmin, refusedAccountChange } from "../../admin/adminHelpers";
+import {
+  ensureCanonicalAccount,
+  findUsersByEmail,
+} from "../utils/ensureUserAccount";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut,
@@ -98,6 +103,12 @@ function Settings({ darkMode }) {
       return;
     }
 
+    const refused = refusedAccountChange(currentUser, { delete: true });
+    if (isDesignatedAdmin(currentUser) || refused) {
+      setDeleteError(refused || "This admin account cannot be deleted.");
+      return;
+    }
+
     setDeleteLoading(true);
     setDeleteError("");
 
@@ -113,18 +124,33 @@ function Settings({ darkMode }) {
       const user = auth.currentUser;
       if (!user || user.uid !== originalUid)
         throw new Error("User session changed during reauthentication");
+      if (isDesignatedAdmin(user) || isDesignatedAdmin(result.user)) {
+        throw new Error("This admin account cannot be deleted.");
+      }
       const uid = user.uid;
+      const account = await ensureCanonicalAccount(user);
+      let matches = [];
+      try {
+        matches = await findUsersByEmail(user.email);
+      } catch (lookupError) {
+        console.warn("Could not find linked accounts:", lookupError);
+      }
+      const ids = [
+        ...new Set([account.id, uid, ...matches.map((match) => match.id)]),
+      ];
 
-      await deleteDoc(doc(db, "users", uid));
+      await Promise.all(ids.map((id) => deleteDoc(doc(db, "users", id))));
 
       const relatedCollections = ["qr_codes", "scans", "analytics"];
       for (const colName of relatedCollections) {
-        try {
-          const q = query(collection(db, colName), where("uid", "==", uid));
-          const snapshot = await getDocs(q);
-          await Promise.all(snapshot.docs.map((d) => deleteDoc(d.ref)));
-        } catch (err) {
-          console.warn(`Error deleting from ${colName}:`, err);
+        for (const id of ids) {
+          try {
+            const q = query(collection(db, colName), where("uid", "==", id));
+            const snapshot = await getDocs(q);
+            await Promise.all(snapshot.docs.map((d) => deleteDoc(d.ref)));
+          } catch (err) {
+            console.warn(`Error deleting from ${colName}:`, err);
+          }
         }
       }
 
@@ -213,7 +239,7 @@ function Settings({ darkMode }) {
               onClick={() => setOpenManual(!openManual)}
               className="w-full flex items-center justify-between"
             >
-              <span className={`text-sm ${textClass}`}>How to use e-CARD</span>
+              <span className={`text-sm ${textClass}`}>How to use DIGICARD</span>
               <ChevronRight
                 size={16}
                 className={`${textSubClass} transition-transform duration-200 ${openManual ? "rotate-90" : ""}`}
@@ -345,7 +371,7 @@ function Settings({ darkMode }) {
           <p
             className={`text-center text-xs ${darkMode ? "text-gray-700" : "text-gray-300"} pb-4`}
           >
-            © 2026 e-CARD · City College of Calamba
+            © 2026 DIGICARD
           </p>
         </div>
       </motion.div>

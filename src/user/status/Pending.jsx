@@ -1,13 +1,19 @@
 // src/user/pages/Pending.jsx - with real-time status listener and sign out
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { auth, db } from "../../config/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
+import { isDesignatedAdmin } from "../../admin/adminHelpers";
+import { subscribeCanonicalAccount } from "../utils/ensureUserAccount";
+import { redeemActivationKey } from "../../shared/activationKeys";
+import { formatActivationKey } from "../../shared/activationKeyFormat";
 
 function Pending() {
   const [isChecking, setIsChecking] = useState(true);
+  const [activationKey, setActivationKey] = useState("");
+  const [activating, setActivating] = useState(false);
+  const [activationError, setActivationError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,13 +24,19 @@ function Pending() {
       return;
     }
 
-    const userDocRef = doc(db, "users", currentUser.uid);
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
 
-    // Real-time listener for status changes
-    const unsubscribe = onSnapshot(
-      userDocRef,
+    return subscribeCanonicalAccount(
+      currentUser,
       (doc) => {
         if (doc.exists()) {
+          if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
+            navigate("/admin", { replace: true });
+            return;
+          }
           const status = doc.data()?.accountStatus;
 
           // If status changes to approved, redirect to home
@@ -47,13 +59,28 @@ function Pending() {
         setIsChecking(false);
       },
     );
-
-    return () => unsubscribe();
   }, [navigate]);
 
   const handleSignOut = async () => {
     await signOut(auth);
     navigate("/login", { replace: true });
+  };
+
+  const handleActivate = async (event) => {
+    event.preventDefault();
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      navigate("/login");
+      return;
+    }
+    setActivating(true);
+    setActivationError("");
+    try {
+      await redeemActivationKey(currentUser, activationKey);
+    } catch (err) {
+      setActivationError(err.message || "This activation key is not valid.");
+      setActivating(false);
+    }
   };
 
   if (isChecking) {
@@ -118,7 +145,7 @@ function Pending() {
           Account Pending Approval
         </h1>
         <p className="text-gray-500 text-sm text-center leading-relaxed mb-6">
-          Your account is currently under review by an administrator.
+          Your account is currently under review.
         </p>
         <p className="text-gray-400 text-xs text-center leading-relaxed mb-7">
           You'll be able to access your dashboard once your account is approved.
@@ -130,8 +157,39 @@ function Pending() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
           </span>
-          <p className="text-xs text-gray-400">Waiting for admin approval</p>
+          <p className="text-xs text-gray-400">Waiting for approval</p>
         </div>
+
+        <form onSubmit={handleActivate} className="mb-4">
+          <label
+            htmlFor="activation-key"
+            className="block text-xs font-medium text-gray-500 mb-1.5"
+          >
+            Have an activation key?
+          </label>
+          <input
+            id="activation-key"
+            value={activationKey}
+            onChange={(e) => {
+              setActivationKey(formatActivationKey(e.target.value));
+              setActivationError("");
+            }}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            className="w-full px-3 py-2.5 mb-2 rounded-xl border border-gray-200 text-sm font-mono tracking-wide text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-gray-400"
+          />
+          {activationError && (
+            <p className="text-xs text-red-500 mb-2">{activationError}</p>
+          )}
+          <button
+            type="submit"
+            disabled={activating || !activationKey.trim()}
+            className="w-full py-2.5 rounded-xl bg-gray-900 text-sm text-white font-medium hover:bg-gray-700 transition disabled:opacity-40"
+          >
+            {activating ? "Checking key…" : "Activate account"}
+          </button>
+        </form>
 
         {/* Sign out button */}
         <button
@@ -144,13 +202,13 @@ function Pending() {
         {/* Note */}
         <div className="bg-gray-50 rounded-xl p-3">
           <p className="text-[0.7rem] text-gray-400 text-center">
-            Please check back later or contact the administrator.
+            Please check back later.
           </p>
         </div>
       </motion.div>
 
       <p className="text-[0.65rem] text-gray-300 mt-5 text-center">
-        © 2026 e-CARD · City College of Calamba
+        © 2026 DIGICARD
       </p>
     </div>
   );

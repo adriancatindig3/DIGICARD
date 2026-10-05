@@ -5,70 +5,57 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "./config/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Login from "./user/pages/Login";
-import Register from "./user/pages/Register";
 import Home from "./user/pages/Home";
+import {
+  createPendingUser,
+  ensureCanonicalAccount,
+  ensureDesignatedAdmin,
+} from "./user/utils/ensureUserAccount";
 import UpdateProfile from "./user/pages/UpdateProfile";
 import ViewQr from "./user/pages/ViewQr";
 import SelectLayout from "./user/pages/SelectLayout";
 import Pending from "./user/status/Pending";
 import Rejected from "./user/status/Rejected";
 import Deleted from "./user/status/Deleted";
-import AdminDashboard from "./admin/AdminDashboard";
 import PublicProfile from "./user/pages/PublicProfile";
+import AdminDashboard from "./admin/AdminDashboard";
+import {
+  isDesignatedAdmin,
+  routeStatus,
+} from "./admin/adminHelpers";
 
-// AdminRoute - ONLY logged-in users with accountType 'admin' can access
-const AdminRoute = ({ children }) => {
-  const [isAdmin, setIsAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
+function RouteSpinner() {
+  return (
+    <div className="flex justify-center items-center min-h-screen bg-gray-50">
+      <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setLoading(true);
-
-      if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const accountType = userDoc.data()?.accountType;
-          if (accountType === "admin") {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-          }
-        } else {
-          setIsAdmin(false);
-        }
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        setIsAdmin(false);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
+// Designated admin email, accountType, or role wins over the pending page.
+async function readRouteStatus(user) {
+  if (isDesignatedAdmin(user)) {
+    try {
+      await ensureDesignatedAdmin(user);
+    } catch (error) {
+      console.error("Error restoring admin account:", error);
+    }
+    return "admin";
   }
 
-  if (!isAdmin && !auth.currentUser) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/home" replace />;
+  try {
+    const account = await ensureCanonicalAccount(user);
+    return routeStatus(account.data);
+  } catch (error) {
+    console.error("Error resolving account:", error);
+  }
 
-  return children;
-};
+  const userDoc = await getDoc(doc(db, "users", user.uid));
+  if (!userDoc.exists()) return "missing";
+  return routeStatus(userDoc.data());
+}
 
-// Protected route that checks if user is approved and NOT admin
+// Protected route that checks if user is approved
 const ProtectedRoute = ({ children }) => {
   const [status, setStatus] = useState("loading");
 
@@ -76,30 +63,8 @@ const ProtectedRoute = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
-
-            if (accountStatus === "approved") {
-              setStatus("approved");
-            } else if (accountStatus === "rejected") {
-              setStatus("rejected");
-            } else if (accountStatus === "deleted") {
-              setStatus("deleted");
-            } else {
-              setStatus("pending");
-            }
-          } else {
-            setStatus("unauthenticated");
-          }
+          const next = await readRouteStatus(user);
+          setStatus(next === "missing" ? "unauthenticated" : next);
         } catch (error) {
           console.error("Error checking user status:", error);
           setStatus("unauthenticated");
@@ -111,13 +76,7 @@ const ProtectedRoute = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (status === "loading") return <RouteSpinner />;
 
   if (status === "unauthenticated") return <Navigate to="/login" replace />;
   if (status === "admin") return <Navigate to="/admin" replace />;
@@ -136,17 +95,30 @@ const PublicRoute = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
+          const next = await readRouteStatus(user);
 
-          if (userDoc.exists() && userDoc.data()?.accountType === "admin") {
+          if (next === "admin") {
             setStatus("admin");
-          } else if (!userDoc.exists()) {
-            setStatus("registration");
-          } else {
-            setStatus("authenticated");
+            return;
           }
+
+          if (next === "missing") {
+            try {
+              await createPendingUser(user);
+            } catch (error) {
+              console.error("Error creating user account:", error);
+            }
+            setStatus("pending");
+            return;
+          }
+
+          setStatus("authenticated");
         } catch (error) {
+          console.error("Error checking user status:", error);
+          if (isDesignatedAdmin(user)) {
+            setStatus("admin");
+            return;
+          }
           setStatus("authenticated");
         }
       } else {
@@ -156,80 +128,12 @@ const PublicRoute = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (status === "loading") return <RouteSpinner />;
 
-  if (status === "registration") return <Navigate to="/register" replace />;
-  if (status === "authenticated") return <Navigate to="/home" replace />;
   if (status === "admin") return <Navigate to="/admin" replace />;
-
-  return children;
-};
-
-// Route for register page
-const RegisterRoute = () => {
-  const [status, setStatus] = useState("loading");
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (!userDoc.exists()) {
-            setStatus("registration");
-          } else {
-            const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
-
-            if (accountStatus === "approved") {
-              setStatus("approved");
-            } else if (accountStatus === "rejected") {
-              setStatus("rejected");
-            } else if (accountStatus === "deleted") {
-              setStatus("deleted");
-            } else {
-              setStatus("pending");
-            }
-          }
-        } catch (error) {
-          console.error("Error checking user status:", error);
-          setStatus("unauthenticated");
-        }
-      } else {
-        setStatus("unauthenticated");
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (status === "unauthenticated") return <Navigate to="/login" replace />;
-  if (status === "admin") return <Navigate to="/admin" replace />;
-  if (status === "approved") return <Navigate to="/home" replace />;
   if (status === "pending") return <Navigate to="/pending" replace />;
-  if (status === "rejected") return <Navigate to="/rejected" replace />;
-  if (status === "deleted") return <Navigate to="/deleted" replace />;
-
-  return <Register />;
+  if (status === "authenticated") return <Navigate to="/home" replace />;
+  return children;
 };
 
 // Route for pending page
@@ -240,33 +144,22 @@ const PendingRoute = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
+          const next = await readRouteStatus(user);
 
-          if (userDoc.exists()) {
-            const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
+          if (next === "missing") {
+            try {
+              await createPendingUser(user);
+            } catch (error) {
+              console.error("Error creating user account:", error);
             }
-
-            if (accountStatus === "approved") {
-              setStatus("approved");
-            } else if (accountStatus === "rejected") {
-              setStatus("rejected");
-            } else if (accountStatus === "deleted") {
-              setStatus("deleted");
-            } else {
-              setStatus("pending");
-            }
-          } else {
-            setStatus("unauthenticated");
+            setStatus(isDesignatedAdmin(user) ? "admin" : "pending");
+            return;
           }
+
+          setStatus(next);
         } catch (error) {
           console.error("Error checking user status:", error);
-          setStatus("unauthenticated");
+          setStatus(isDesignatedAdmin(user) ? "admin" : "unauthenticated");
         }
       } else {
         setStatus("unauthenticated");
@@ -275,13 +168,7 @@ const PendingRoute = () => {
     return () => unsubscribe();
   }, []);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (status === "loading") return <RouteSpinner />;
 
   if (status === "unauthenticated") return <Navigate to="/login" replace />;
   if (status === "admin") return <Navigate to="/admin" replace />;
@@ -300,30 +187,8 @@ const RejectedRoute = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
-
-            if (accountStatus === "rejected") {
-              setStatus("rejected");
-            } else if (accountStatus === "approved") {
-              setStatus("approved");
-            } else if (accountStatus === "deleted") {
-              setStatus("deleted");
-            } else {
-              setStatus("pending");
-            }
-          } else {
-            setStatus("unauthenticated");
-          }
+          const next = await readRouteStatus(user);
+          setStatus(next === "missing" ? "unauthenticated" : next);
         } catch (error) {
           console.error("Error checking user status:", error);
           setStatus("unauthenticated");
@@ -335,13 +200,7 @@ const RejectedRoute = () => {
     return () => unsubscribe();
   }, []);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (status === "loading") return <RouteSpinner />;
 
   if (status === "unauthenticated") return <Navigate to="/login" replace />;
   if (status === "admin") return <Navigate to="/admin" replace />;
@@ -360,30 +219,8 @@ const DeletedRoute = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            const accountStatus = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            if (accountType === "admin") {
-              setStatus("admin");
-              return;
-            }
-
-            if (accountStatus === "deleted") {
-              setStatus("deleted");
-            } else if (accountStatus === "approved") {
-              setStatus("approved");
-            } else if (accountStatus === "rejected") {
-              setStatus("rejected");
-            } else {
-              setStatus("pending");
-            }
-          } else {
-            setStatus("unauthenticated");
-          }
+          const next = await readRouteStatus(user);
+          setStatus(next === "missing" ? "unauthenticated" : next);
         } catch (error) {
           console.error("Error checking user status:", error);
           setStatus("unauthenticated");
@@ -400,13 +237,7 @@ const DeletedRoute = () => {
     return () => unsubscribe();
   }, []);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (status === "loading") return <RouteSpinner />;
 
   if (status === "admin") return <Navigate to="/admin" replace />;
   if (status === "approved") return <Navigate to="/home" replace />;
@@ -415,6 +246,37 @@ const DeletedRoute = () => {
   if (status === "unauthenticated") return <Navigate to="/login" replace />;
 
   return <Deleted />;
+};
+
+const AdminRoute = ({ children }) => {
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const next = await readRouteStatus(user);
+          setStatus(next === "missing" ? "unauthenticated" : next);
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+          setStatus("unauthenticated");
+        }
+      } else {
+        setStatus("unauthenticated");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (status === "loading") return <RouteSpinner />;
+
+  if (status === "unauthenticated") return <Navigate to="/login" replace />;
+  if (status === "pending") return <Navigate to="/pending" replace />;
+  if (status === "rejected") return <Navigate to="/rejected" replace />;
+  if (status === "deleted") return <Navigate to="/deleted" replace />;
+  if (status !== "admin") return <Navigate to="/home" replace />;
+
+  return children;
 };
 
 function App() {
@@ -433,12 +295,11 @@ function App() {
             </PublicRoute>
           }
         />
-        <Route path="/register" element={<RegisterRoute />} />
+        <Route path="/register" element={<Navigate to="/pending" replace />} />
         <Route path="/pending" element={<PendingRoute />} />
         <Route path="/rejected" element={<RejectedRoute />} />
         <Route path="/deleted" element={<DeletedRoute />} />
 
-        {/* ADMIN ONLY ROUTE - Protected */}
         <Route
           path="/admin"
           element={

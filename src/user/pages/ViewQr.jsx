@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../config/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { ensureCanonicalAccount } from "../utils/ensureUserAccount";
 import { onAuthStateChanged } from "firebase/auth";
+import { profileUrl } from "../../config/site";
 import QRCodeLib from "react-qr-code";
 const QRCode = QRCodeLib.default || QRCodeLib.QRCode || QRCodeLib;
 import { Download, Copy, Check, Wifi, Smartphone } from "lucide-react";
@@ -20,11 +22,7 @@ function ViewQr({ darkMode }) {
   const qrFloatingBoxRef = useRef(null);
 
   // hotdog
-  const getProfileUrl = (userId) => {
-    // Get current origin (https://yourdomain.com)
-    const origin = window.location.origin;
-    return `${origin}/profile/${userId}`;
-  };
+  const getProfileUrl = (userId) => profileUrl(userId);
 
   // Function to convert oklch to rgb
   const convertOklchToRgb = (oklchString) => {
@@ -125,13 +123,14 @@ function ViewQr({ darkMode }) {
       }
       setUser(currentUser);
       try {
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const account = await ensureCanonicalAccount(currentUser);
+        const userDocRef = doc(db, "users", account.id);
         const userDoc = await getDoc(userDocRef);
-        const data = userDoc.exists() ? userDoc.data() : {};
+        const data = userDoc.exists() ? userDoc.data() : account.data || {};
         setQrData({
           name: data.displayName || currentUser.displayName || "User",
           email: currentUser.email || "",
-          profileUrl: getProfileUrl(currentUser.uid),
+          profileUrl: getProfileUrl(account.id),
         });
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -339,7 +338,7 @@ function ViewQr({ darkMode }) {
               <Smartphone size={13} className={iconTextClass} />
             </div>
             <p className={`text-xs ${textSubClass} leading-relaxed`}>
-              This QR code links directly to your e-CARD profile. Anyone who
+              This QR code links directly to your DIGICARD profile. Anyone who
               scans it can view your digital identity card instantly.{" "}
               <span
                 className={
@@ -367,8 +366,7 @@ function ViewQr({ darkMode }) {
       </div>
 
       <p className={`text-center text-[10px] ${footerTextClass} mt-6`}>
-        © 2026 e-CARD · NFC Digital Business Card Platform · City College of
-        Calamba
+        © 2026 DIGICARD · NFC Digital Business Card Platform
       </p>
     </div>
   );

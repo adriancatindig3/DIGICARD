@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { subscribeCanonicalAccount } from "../utils/ensureUserAccount";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -16,7 +16,8 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
+import { isDesignatedAdmin } from "../../admin/adminHelpers";
 import UpdateProfile from "./UpdateProfile";
 import ViewQr from "./ViewQr";
 import SelectLayout from "./SelectLayout";
@@ -63,13 +64,19 @@ function Home() {
       return;
     }
 
-    const userDocRef = doc(db, "users", currentUser.uid);
+    if (isDesignatedAdmin(currentUser)) {
+      navigate("/admin", { replace: true });
+      return;
+    }
 
-    // Listen for real-time status changes
-    const unsubscribe = onSnapshot(
-      userDocRef,
+    return subscribeCanonicalAccount(
+      currentUser,
       (doc) => {
         if (doc.exists()) {
+          if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
+            navigate("/admin", { replace: true });
+            return;
+          }
           const status = doc.data()?.accountStatus;
 
           // If status changes from approved to anything else, redirect immediately
@@ -90,8 +97,6 @@ function Home() {
         console.error("Error checking status:", error);
       },
     );
-
-    return () => unsubscribe();
   }, [navigate]);
 
   useEffect(() => {
@@ -190,15 +195,8 @@ function Home() {
         className={`md:hidden fixed top-0 left-0 right-0 ${mobileHeaderBgClass} border-b px-4 py-3 flex items-center justify-between z-50`}
       >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden">
-            <img
-              src="/e-CARD generic.png"
-              alt="e-CARD"
-              className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-            />
-          </div>
           <span className={`font-semibold ${mobileHeaderTextClass}`}>
-            e-CARD
+            DIGICARD
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -251,16 +249,9 @@ function Home() {
             >
               <div className={`p-5 border-b ${borderClass}`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden">
-                    <img
-                      src="/e-CARD generic.png"
-                      alt="e-CARD"
-                      className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-                    />
-                  </div>
                   <div>
                     <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                      e-CARD
+                      DIGICARD
                     </div>
                     <div className={`text-[9px] ${sidebarSubtextClass}`}>
                       Digital Business Card
@@ -329,16 +320,9 @@ function Home() {
         {/* Logo */}
         <div className={`p-5 border-b ${borderClass}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden">
-              <img
-                src="/e-CARD generic.png"
-                alt="e-CARD"
-                className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-              />
-            </div>
             <div>
               <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                e-CARD
+                DIGICARD
               </div>
               <div className={`text-[9px] ${sidebarSubtextClass}`}>
                 Digital Business Card

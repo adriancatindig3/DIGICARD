@@ -1,8 +1,19 @@
 import { useState, useEffect, useRef } from "react";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { updateDoc } from "firebase/firestore";
+import { getDoc } from "firebase/firestore";
+import { displayCompany } from "../utils/profileHelpers.jsx";
+import CoverBanner from "../components/CoverBanner";
+import { deleteField, updateDoc } from "firebase/firestore";
+import { canonicalUserRef } from "../utils/ensureUserAccount";
+import CardStyleEditor from "../components/CardStyleEditor";
+import {
+  DEFAULT_CARD_STYLE,
+  cardFill,
+  cardRootProps,
+  foldLegacyCardStyle,
+  styleForLayout,
+} from "../utils/cardStyle";
 import { onAuthStateChanged } from "firebase/auth";
 
 import {
@@ -23,8 +34,6 @@ import {
   FaCheckCircle,
   FaLink,
 } from "react-icons/fa";
-
-const FALLBACK_LOGO = "/CCC.png";
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 const Toast = ({ message, visible, darkMode }) => (
@@ -59,6 +68,9 @@ const Toast = ({ message, visible, darkMode }) => (
 
 const SelectLayout = ({ darkMode }) => {
   const [selectedLayout, setSelectedLayout] = useState(1);
+  const [editingCard, setEditingCard] = useState(false);
+  const [draftStyle, setDraftStyle] = useState(DEFAULT_CARD_STYLE);
+  const [styleSaving, setStyleSaving] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -76,7 +88,6 @@ const SelectLayout = ({ darkMode }) => {
   // Double-tap tracking (mobile)
   const lastTapRef = useRef(0);
 
-  const [schoolLogoURL, setSchoolLogoURL] = useState(FALLBACK_LOGO);
   const navigate = useNavigate();
 
   const bgClass = darkMode ? "bg-gray-900" : "bg-gray-50";
@@ -102,19 +113,6 @@ const SelectLayout = ({ darkMode }) => {
   };
 
   useEffect(() => {
-    const fetchSchoolLogo = async () => {
-      try {
-        const snap = await getDoc(doc(db, "settings", "school"));
-        if (snap.exists() && snap.data().logoURL)
-          setSchoolLogoURL(snap.data().logoURL);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchSchoolLogo();
-  }, []);
-
-  useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener("resize", check);
@@ -129,10 +127,22 @@ const SelectLayout = ({ darkMode }) => {
       }
       setUser(currentUser);
       try {
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocRef = await canonicalUserRef(currentUser);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
+          const folded = foldLegacyCardStyle(data);
+          if (folded.migrated) {
+            await updateDoc(userDocRef, {
+              cardStyles: folded.cardStyles,
+              cardColorStart: deleteField(),
+              cardColorEnd: deleteField(),
+              cardGradient: deleteField(),
+              cardGradientAngle: deleteField(),
+              cardFont: deleteField(),
+              cardTextColor: deleteField(),
+            });
+          }
           setUserData({
             displayName: data.displayName || currentUser.displayName || "User",
             email: currentUser.email || "",
@@ -140,8 +150,8 @@ const SelectLayout = ({ darkMode }) => {
             bio: data.bio || "",
             location: data.location || "",
             phoneNumber: data.phoneNumber || "",
-            occupation: data.occupation || "",
-            company: "City College of Calamba",
+            occupation: data.position || data.occupation || "",
+            company: displayCompany(data.company),
             socialLinks: {
               facebook: data.socialLinks?.facebook || "",
               twitter: data.socialLinks?.twitter || "",
@@ -153,6 +163,12 @@ const SelectLayout = ({ darkMode }) => {
             selectedLayout: data.selectedLayout || 1,
             coverPhotoURL: data.coverPhotoURL || "",
             skills: data.skills || "",
+            cardStyles: folded.cardStyles,
+            cardColorStart: "",
+            cardColorEnd: "",
+            cardGradient: "",
+            cardFont: "",
+            cardTextColor: "",
           });
           setSelectedLayout(data.selectedLayout || 1);
         } else {
@@ -164,7 +180,7 @@ const SelectLayout = ({ darkMode }) => {
             location: "",
             phoneNumber: "",
             occupation: "",
-            company: "City College of Calamba",
+            company: "",
             socialLinks: {},
             selectedLayout: 1,
             coverPhotoURL: "",
@@ -183,7 +199,7 @@ const SelectLayout = ({ darkMode }) => {
     setLoading(true);
     setSelectedLayout(layoutId);
     try {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = await canonicalUserRef(user);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         await updateDoc(userDocRef, {
@@ -197,6 +213,63 @@ const SelectLayout = ({ darkMode }) => {
       console.error(e);
     } finally {
       setTimeout(() => setLoading(false), 400);
+    }
+  };
+
+  const openCardEditor = () => {
+    const saved = styleForLayout(userData, selectedLayout);
+    const hasSavedColors = Boolean(saved.cardColorStart);
+    setDraftStyle({
+      cardColorStart: saved.cardColorStart || DEFAULT_CARD_STYLE.cardColorStart,
+      cardColorEnd: saved.cardColorEnd || DEFAULT_CARD_STYLE.cardColorEnd,
+      cardGradientAngle: hasSavedColors
+        ? saved.cardGradientAngle
+        : DEFAULT_CARD_STYLE.cardGradientAngle,
+      cardFont: saved.cardFont || DEFAULT_CARD_STYLE.cardFont,
+      cardTextColor: saved.cardTextColor || "",
+    });
+    setEditingCard(true);
+  };
+
+  const saveCardStyle = async () => {
+    if (!user || styleSaving) return;
+    setStyleSaving(true);
+    const key = String(selectedLayout);
+    const entry = {
+      cardColorStart: draftStyle.cardColorStart,
+      cardColorEnd: draftStyle.cardColorEnd,
+      cardGradientAngle: draftStyle.cardGradientAngle,
+      cardFont: draftStyle.cardFont,
+      cardTextColor: draftStyle.cardTextColor || "",
+    };
+    const cardStyles = { ...(userData?.cardStyles || {}), [key]: entry };
+    try {
+      const userDocRef = await canonicalUserRef(user);
+      await updateDoc(userDocRef, {
+        cardStyles,
+        cardColorStart: deleteField(),
+        cardColorEnd: deleteField(),
+        cardGradient: deleteField(),
+        cardGradientAngle: deleteField(),
+        cardFont: deleteField(),
+        cardTextColor: deleteField(),
+        updatedAt: new Date().toISOString(),
+      });
+      setUserData((prev) => ({
+        ...prev,
+        cardStyles,
+        cardColorStart: "",
+        cardColorEnd: "",
+        cardGradient: "",
+        cardFont: "",
+        cardTextColor: "",
+      }));
+      setEditingCard(false);
+      showToast("Card style saved");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setStyleSaving(false);
     }
   };
 
@@ -240,27 +313,16 @@ const SelectLayout = ({ darkMode }) => {
       .slice(0, 2);
   };
 
-  const SchoolLogo = ({ className = "w-3 h-3", style = {} }) => (
-    <img
-      src={schoolLogoURL}
-      alt="School logo"
-      className={`object-contain ${className}`}
-      style={style}
-      onError={(e) => {
-        e.target.src = FALLBACK_LOGO;
-      }}
-    />
-  );
-
   // ─── LAYOUTS (Layout1 through Layout9 - same as before) ───────────────────
   // ... (keep all Layout1 through Layout9 exactly as they are) ...
 
   const Layout1 = () => (
     <div
-      className="w-full font-['Inter'] text-white"
-      style={{
-        background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
-      }}
+      {...cardRootProps(
+        styleForLayout(userData, 1),
+        "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
+        "text-white",
+      )}
     >
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
@@ -299,7 +361,6 @@ const SelectLayout = ({ darkMode }) => {
             )}
             {userData?.company && (
               <div className="flex items-center gap-1 mt-1">
-                <SchoolLogo className="w-3 h-3" style={{ opacity: 0.8 }} />
                 <span
                   className="text-xs truncate"
                   style={{ color: "rgba(255,255,255,0.55)" }}
@@ -460,10 +521,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout2 = () => (
-    <div
-      className="w-full font-['Inter'] text-white"
-      style={{ background: "#0f1623" }}
-    >
+    <div {...cardRootProps(styleForLayout(userData, 2), "#0f1623", "text-white")}>
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
           <div
@@ -501,7 +559,6 @@ const SelectLayout = ({ darkMode }) => {
             )}
             {userData?.company && (
               <div className="flex items-center gap-1 mt-1">
-                <SchoolLogo className="w-3 h-3" style={{ opacity: 0.8 }} />
                 <span
                   className="text-xs"
                   style={{ color: "rgba(255,255,255,0.5)" }}
@@ -668,7 +725,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout3 = () => (
-    <div className="w-full bg-white font-['Inter']">
+    <div {...cardRootProps(styleForLayout(userData, 3), "#ffffff")}>
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
@@ -694,7 +751,6 @@ const SelectLayout = ({ darkMode }) => {
             )}
             {userData?.company && (
               <div className="flex items-center gap-1 mt-1">
-                <SchoolLogo className="w-3 h-3" />
                 <span className="text-xs text-gray-400">
                   {userData.company}
                 </span>
@@ -801,29 +857,21 @@ const SelectLayout = ({ darkMode }) => {
 
   const Layout4 = () => (
     <div
-      className="w-full font-['Inter'] text-white"
-      style={{
-        background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
-      }}
+      {...cardRootProps(
+        styleForLayout(userData, 4),
+        "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
+        "text-white",
+      )}
     >
-      <div className="h-36 relative overflow-hidden">
-        {/* Cover photo without green tint */}
-        {userData?.coverPhotoURL ? (
-          <img
-            src={userData.coverPhotoURL}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div
-            style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
-            className="w-full h-full"
-          />
-        )}
-      </div>
+      <CoverBanner src={userData?.coverPhotoURL}>
+        <div
+          style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
+          className="h-full w-full"
+        />
+      </CoverBanner>
       <div
         className="px-6 py-4 relative"
-        style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+        style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
       >
         <div
           className="w-20 h-20 rounded-2xl overflow-hidden absolute -top-10 left-6 border-4"
@@ -860,7 +908,6 @@ const SelectLayout = ({ darkMode }) => {
               className="flex items-center gap-2 text-xs mb-4"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              <SchoolLogo className="w-4 h-4" style={{ opacity: 0.8 }} />
               <span>{userData.company}</span>
             </div>
           )}
@@ -985,23 +1032,14 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout5 = () => (
-    <div className="w-full font-['Inter']" style={{ background: "#0d1b2e" }}>
-      <div className="h-36 relative overflow-hidden">
-        {/* Cover photo without brightness reduction */}
-        {userData?.coverPhotoURL ? (
-          <img
-            src={userData.coverPhotoURL}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div
-            style={{ background: "linear-gradient(135deg, #0d1b2e, #1a3a5c)" }}
-            className="w-full h-full"
-          />
-        )}
-      </div>
-      <div className="px-6 py-4 relative" style={{ background: "#0d1b2e" }}>
+    <div {...cardRootProps(styleForLayout(userData, 5), "#0d1b2e", "text-white")}>
+      <CoverBanner src={userData?.coverPhotoURL}>
+        <div
+          style={{ background: cardFill("linear-gradient(135deg, #0d1b2e, #1a3a5c)") }}
+          className="h-full w-full"
+        />
+      </CoverBanner>
+      <div className="px-6 py-4 relative" style={{ background: cardFill("#0d1b2e") }}>
         <div
           className="w-20 h-20 rounded-2xl overflow-hidden absolute -top-10 left-6"
           style={{
@@ -1040,7 +1078,6 @@ const SelectLayout = ({ darkMode }) => {
               className="flex items-center gap-2 text-xs mb-4"
               style={{ color: "#5a8ab0" }}
             >
-              <SchoolLogo className="w-4 h-4" />
               <span>{userData.company}</span>
             </div>
           )}
@@ -1165,19 +1202,12 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout6 = () => (
-    <div className="w-full bg-white font-['Inter']">
-      <div
-        className="h-36 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #1f2937, #111827)" }}
-      >
-        {userData?.coverPhotoURL && (
-          <img
-            src={userData.coverPhotoURL}
-            alt=""
-            className="w-full h-full object-cover"
-          />
-        )}
-      </div>
+    <div {...cardRootProps(styleForLayout(userData, 6), "#ffffff")}>
+      <CoverBanner
+        src={userData?.coverPhotoURL}
+        alt=""
+        style={{ background: cardFill("linear-gradient(135deg, #1f2937, #111827)") }}
+      />
       <div className="px-6 py-4 relative bg-white">
         <div
           className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-white shadow-lg absolute -top-10 left-6"
@@ -1205,7 +1235,6 @@ const SelectLayout = ({ darkMode }) => {
           )}
           {userData?.company && (
             <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
-              <SchoolLogo className="w-4 h-4" />
               <span>{userData.company}</span>
             </div>
           )}
@@ -1294,8 +1323,11 @@ const SelectLayout = ({ darkMode }) => {
 
   const Layout7 = () => (
     <div
-      className="w-full font-['Inter'] text-white"
-      style={{ background: "linear-gradient(160deg, #2a3a2a, #1a2a1e)" }}
+      {...cardRootProps(
+        styleForLayout(userData, 7),
+        "linear-gradient(160deg, #2a3a2a, #1a2a1e)",
+        "text-white",
+      )}
     >
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div
@@ -1331,16 +1363,6 @@ const SelectLayout = ({ darkMode }) => {
             {userData.bio}
           </p>
         )}
-
-        <button
-          className="w-full py-3 rounded-xl text-sm font-medium mb-4"
-          style={{
-            background: "rgba(255,255,255,0.15)",
-            border: "0.5px solid rgba(255,255,255,0.25)",
-          }}
-        >
-          Let's connect
-        </button>
 
         {/* Skills Section */}
         {userData?.skills && (
@@ -1468,10 +1490,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout8 = () => (
-    <div
-      className="w-full font-['Inter'] text-white"
-      style={{ background: "#0f1623" }}
-    >
+    <div {...cardRootProps(styleForLayout(userData, 8), "#0f1623", "text-white")}>
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div
           className="w-24 h-24 rounded-full overflow-hidden border-2 mb-3"
@@ -1506,16 +1525,6 @@ const SelectLayout = ({ darkMode }) => {
             {userData.bio}
           </p>
         )}
-
-        <button
-          className="w-full py-3 rounded-xl text-sm font-medium mb-4"
-          style={{
-            background: "rgba(255,255,255,0.08)",
-            border: "0.5px solid rgba(255,255,255,0.15)",
-          }}
-        >
-          Let's connect
-        </button>
 
         {/* Skills Section */}
         {userData?.skills && (
@@ -1654,7 +1663,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout9 = () => (
-    <div className="w-full bg-white font-['Inter']">
+    <div {...cardRootProps(styleForLayout(userData, 9), "#ffffff")}>
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-gray-200 mb-3">
           {userData?.photoURL ? (
@@ -1683,10 +1692,6 @@ const SelectLayout = ({ darkMode }) => {
             {userData.bio}
           </p>
         )}
-
-        <button className="w-full py-3 rounded-xl text-sm font-medium mb-4 bg-gray-900 text-white">
-          Let's connect
-        </button>
 
         {/* Skills Section */}
         {userData?.skills && (
@@ -1885,6 +1890,19 @@ const SelectLayout = ({ darkMode }) => {
 
   const currentLayout = layouts[currentIndex];
 
+  if (editingCard) {
+    return (
+      <CardStyleEditor
+        userData={{ ...userData, selectedLayout }}
+        draft={draftStyle}
+        onChange={setDraftStyle}
+        onBack={() => setEditingCard(false)}
+        onDone={saveCardStyle}
+        saving={styleSaving}
+      />
+    );
+  }
+
   return (
     <div className={`min-h-screen ${bgClass}`}>
       <Toast
@@ -2006,6 +2024,16 @@ const SelectLayout = ({ darkMode }) => {
               </button>
             )}
           </div>
+
+          {selectedLayout === currentLayout.id && (
+            <button
+              type="button"
+              onClick={openCardEditor}
+              className="mt-3 w-full rounded-xl bg-gray-900 py-2.5 text-sm font-semibold text-white"
+            >
+              Edit card
+            </button>
+          )}
         </div>
       </div>
 
@@ -2075,6 +2103,16 @@ const SelectLayout = ({ darkMode }) => {
                     {layout.component}
                   </div>
                 </div>
+
+                {isSelected && (
+                  <button
+                    type="button"
+                    onClick={openCardEditor}
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gray-900 text-white hover:bg-gray-700"
+                  >
+                    Edit card
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleSelectLayout(layout.id)}

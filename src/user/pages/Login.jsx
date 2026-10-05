@@ -6,8 +6,16 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { auth, db } from "../../config/firebase";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { auth } from "../../config/firebase";
+import {
+  ensureCanonicalAccount,
+  ensureDesignatedAdmin,
+} from "../utils/ensureUserAccount";
+import {
+  PROTECTED_ADMIN_EMAIL,
+  isDesignatedAdmin,
+  routePath,
+} from "../../admin/adminHelpers";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -34,43 +42,22 @@ function Login() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            const status = userDoc.data()?.accountStatus;
-            const accountType = userDoc.data()?.accountType;
-
-            // Admin goes directly to admin dashboard
-            if (accountType === "admin") {
-              navigate("/admin", { replace: true });
-              return;
+          if (isDesignatedAdmin(user)) {
+            try {
+              await ensureDesignatedAdmin(user);
+            } catch (createErr) {
+              console.error("Error restoring admin account:", createErr);
             }
-
-            // Route based on account status for regular users
-            switch (status) {
-              case "approved":
-                navigate("/home", { replace: true });
-                break;
-              case "registration":
-                navigate("/register", { replace: true });
-                break;
-              case "pending":
-                navigate("/pending", { replace: true });
-                break;
-              case "rejected":
-                navigate("/rejected", { replace: true });
-                break;
-              case "deleted":
-                navigate("/deleted", { replace: true });
-                break;
-              default:
-                navigate("/register", { replace: true });
-            }
+            navigate("/admin", { replace: true });
             return;
-          } else {
-            // User exists in Auth but not in Firestore - needs registration
-            setCheckingAuth(false);
+          }
+
+          try {
+            const account = await ensureCanonicalAccount(user);
+            navigate(routePath(account.data), { replace: true });
+          } catch (createErr) {
+            console.error("Error creating user account:", createErr);
+            navigate("/pending", { replace: true });
           }
         } catch (err) {
           console.error("Auth check error:", err);
@@ -86,38 +73,28 @@ function Login() {
 
   const saveUserToFirestore = async (user) => {
     try {
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (!userDoc.exists()) {
-        // ✅ DON'T CREATE THE USER DOCUMENT HERE!
-        // Just return that user needs to complete registration
-        console.log("New user needs to complete registration:", user.email);
-        return { success: true, status: "registration", isNewUser: true };
-      } else {
-        const status = userDoc.data()?.accountStatus;
-        const accountType = userDoc.data()?.accountType;
-
-        // Handle deleted accounts
-        if (status === "deleted") {
-          await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
-          return { success: true, status: "deleted", accountType };
-        }
-
-        // Handle rejected accounts
-        if (status === "rejected") {
-          await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
-          return { success: true, status: "rejected", accountType };
-        }
-
-        // Update last login for existing users
-        await updateDoc(userRef, {
-          lastLoginAt: new Date().toISOString(),
-          isActive: status === "approved",
-        });
-
-        return { success: true, status: status || "pending", accountType };
+      if (isDesignatedAdmin(user)) {
+        await ensureDesignatedAdmin(user);
+        return {
+          success: true,
+          status: "approved",
+          accountStatus: "approved",
+          accountType: "admin",
+          role: "admin",
+          email: user.email || PROTECTED_ADMIN_EMAIL,
+        };
       }
+
+      const account = await ensureCanonicalAccount(user);
+      const data = account.data || {};
+      return {
+        success: true,
+        status: data.accountStatus || "pending",
+        accountStatus: data.accountStatus || "pending",
+        accountType: data.accountType || "user",
+        role: data.role,
+        email: data.email || user.email,
+      };
     } catch (error) {
       console.error("Error checking user:", error);
       return { success: false, error: error.message };
@@ -146,6 +123,11 @@ function Login() {
       const saveResult = await saveUserToFirestore(user);
 
       if (!saveResult.success) {
+        if (isDesignatedAdmin(user)) {
+          navigate("/admin", { replace: true });
+          setLoading(false);
+          return;
+        }
         await signOut(auth);
         setError(
           saveResult.error || "Failed to create account. Please try again.",
@@ -154,20 +136,7 @@ function Login() {
         return;
       }
 
-      // Route based on account status
-      if (saveResult.status === "approved") {
-        navigate("/home", { replace: true });
-      } else if (saveResult.status === "registration") {
-        navigate("/register", { replace: true });
-      } else if (saveResult.status === "pending") {
-        navigate("/pending", { replace: true });
-      } else if (saveResult.status === "rejected") {
-        navigate("/rejected", { replace: true });
-      } else if (saveResult.status === "deleted") {
-        navigate("/deleted", { replace: true });
-      } else {
-        navigate("/register", { replace: true });
-      }
+      navigate(routePath(saveResult), { replace: true });
     } catch (err) {
       console.error("Login error:", err);
       if (
@@ -200,24 +169,11 @@ function Login() {
         className="relative max-w-md w-full mx-auto"
       >
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden bg-gray-50 shadow-md">
-              <img
-                src="/image.png"
-                alt="e-CARD Logo"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://via.placeholder.com/80x80?text=QR";
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Title Section */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+            <p className="text-sm font-semibold tracking-wide text-gray-900">
+              DIGICARD
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mt-2">
               Welcome back
             </h1>
             <p className="text-gray-500 text-sm sm:text-base mt-2">
@@ -326,21 +282,9 @@ function Login() {
             </button>
           </div>
 
-          {/* Divider */}
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-gray-400">
-                
-              </span>
-            </div>
-          </div>
-
           {/* Footer */}
-          <p className="text-center text-xs text-gray-400">
-            © 2026 City College Of Calamba. All rights reserved.
+          <p className="text-center text-xs text-gray-400 mt-8">
+            © 2026 DIGICARD. All rights reserved.
           </p>
         </div>
       </motion.div>
@@ -384,9 +328,8 @@ function Login() {
                   1. Eligibility
                 </h3>
                 <p>
-                  e-CARD is available to all City College of Calamba users. New
-                  registrations require admin approval before accessing the
-                  platform.
+                  DIGICARD is a digital business card. New accounts stay pending
+                  until they are approved.
                 </p>
               </div>
               <div>
@@ -394,8 +337,7 @@ function Login() {
                   2. Use of Service
                 </h3>
                 <p>
-                  You agree to use e-CARD in accordance with all applicable laws
-                  and the policies of City College of Calamba.
+                  You agree to use DIGICARD in accordance with all applicable laws.
                 </p>
               </div>
               <div>
@@ -403,8 +345,8 @@ function Login() {
                   3. Account Approval
                 </h3>
                 <p>
-                  All new accounts require admin approval. The admin reserves
-                  the right to approve or reject any registration.
+                  New accounts remain pending until they are approved. An account
+                  may be approved or rejected.
                 </p>
               </div>
             </div>
@@ -469,7 +411,7 @@ function Login() {
                 </h3>
                 <p>
                   When you sign in with Google, we collect your profile picture
-                  and username to personalize your e-CARD experience.
+                  and username to personalize your DIGICARD experience.
                 </p>
               </div>
               <div>
@@ -478,7 +420,7 @@ function Login() {
                 </h3>
                 <p>
                   Your profile picture and username are used solely to display
-                  your identity within the e-CARD platform.
+                  your identity within the DIGICARD platform.
                 </p>
               </div>
               <div>

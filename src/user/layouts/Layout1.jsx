@@ -1,13 +1,13 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
-import SchoolLogo from "../components/SchoolLogo";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
-const Layout1 = ({ userData, schoolLogo, onConnect }) => (
+import { cardRootProps, styleForLayout } from "../utils/cardStyle";
+const Layout1 = ({ userData }) => (
   <div
-    className="w-full font-['Inter'] text-white"
-    style={{
-      background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
-    }}
+    {...cardRootProps(
+      styleForLayout(userData, 1),
+      "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
+      "text-white",
+    )}
   >
     <div className="pt-6 pb-4 px-4">
       <div className="flex items-center gap-4 mb-4">
@@ -45,19 +45,12 @@ const Layout1 = ({ userData, schoolLogo, onConnect }) => (
             </p>
           )}
           {userData?.company && (
-            <div className="flex items-center gap-1 mt-1">
-              <SchoolLogo
-                schoolLogo={schoolLogo}
-                className="w-3 h-3"
-                style={{ opacity: 0.8 }}
-              />
-              <span
-                className="text-xs truncate"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                {userData.company}
-              </span>
-            </div>
+            <p
+              className="text-xs truncate mt-1"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              {userData.company}
+            </p>
           )}
         </div>
       </div>
@@ -203,7 +196,6 @@ const Layout1 = ({ userData, schoolLogo, onConnect }) => (
           </div>
         </div>
       )}
-      <ConnectButton onClick={onConnect} dark={true} />
     </div>
   </div>
 );

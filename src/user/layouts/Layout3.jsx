@@ -1,10 +1,9 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
-import SchoolLogo from "../components/SchoolLogo";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardRootProps, styleForLayout } from "../utils/cardStyle";
 
-const Layout3 = ({ userData, schoolLogo, onConnect }) => (
-  <div className="w-full bg-white font-['Inter']">
+const Layout3 = ({ userData }) => (
+  <div {...cardRootProps(styleForLayout(userData, 3), "#ffffff")}>
     <div className="pt-6 pb-4 px-4">
       <div className="flex items-center gap-4 mb-4">
         <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
@@ -29,10 +28,7 @@ const Layout3 = ({ userData, schoolLogo, onConnect }) => (
             </p>
           )}
           {userData?.company && (
-            <div className="flex items-center gap-1 mt-1">
-              <SchoolLogo schoolLogo={schoolLogo} className="w-3 h-3" />
-              <span className="text-xs text-gray-400">{userData.company}</span>
-            </div>
+            <p className="text-xs text-gray-400 mt-1">{userData.company}</p>
           )}
         </div>
       </div>
@@ -126,7 +122,6 @@ const Layout3 = ({ userData, schoolLogo, onConnect }) => (
           </div>
         </div>
       )}
-      <ConnectButton onClick={onConnect} dark={false} />
     </div>
   </div>
 );

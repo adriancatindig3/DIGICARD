@@ -1,9 +1,9 @@
 import { FaEnvelope, FaPhone, FaMapMarkerAlt } from "react-icons/fa";
-import ConnectButton from "../components/ConnectButton";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardRootProps, styleForLayout } from "../utils/cardStyle";
 
-const Layout9 = ({ userData, onConnect }) => (
-  <div className="w-full bg-white font-['Inter']">
+const Layout9 = ({ userData }) => (
+  <div {...cardRootProps(styleForLayout(userData, 9), "#ffffff")}>
     <div className="flex flex-col items-center pt-8 pb-4 px-4">
       <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-gray-200 mb-3">
         {userData?.photoURL ? (
@@ -26,8 +26,6 @@ const Layout9 = ({ userData, onConnect }) => (
       {userData?.bio && (
         <p className="text-xs text-center text-gray-600 mb-4">{userData.bio}</p>
       )}
-
-      <ConnectButton onClick={onConnect} dark={false} />
 
       {userData?.skills && (
         <div className="w-full mb-4 mt-4">
