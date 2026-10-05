@@ -1,5 +1,6 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
+import CoverBanner from "../components/CoverBanner";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
 
 const Layout4 = ({ userData, onConnect }) => (
@@ -9,20 +10,12 @@ const Layout4 = ({ userData, onConnect }) => (
       background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
     }}
   >
-    <div className="h-36 relative overflow-hidden">
-      {userData?.coverPhotoURL ? (
-        <img
-          src={userData.coverPhotoURL}
-          alt="Cover"
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div
-          style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
-          className="w-full h-full"
-        />
-      )}
-    </div>
+    <CoverBanner src={userData?.coverPhotoURL}>
+      <div
+        style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+        className="h-full w-full"
+      />
+    </CoverBanner>
     <div
       className="px-6 py-4 relative"
       style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}

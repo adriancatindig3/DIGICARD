@@ -17,6 +17,8 @@ import {
   refusedAccountChange,
 } from "../../admin/adminHelpers";
 import Cropper from "react-easy-crop";
+import CoverBanner, { COVER_ASPECT } from "../components/CoverBanner";
+import { getCroppedImg } from "../utils/cropImage";
 import {
   ArrowLeft,
   Save,
@@ -83,6 +85,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   const [coverCrop, setCoverCrop] = useState({ x: 0, y: 0 });
   const [coverZoom, setCoverZoom] = useState(1);
   const [coverCroppedAreaPixels, setCoverCroppedAreaPixels] = useState(null);
+  const coverCropPixelsRef = useRef(null);
   const [coverImageToCrop, setCoverImageToCrop] = useState(null);
   const [isSavingCoverPic, setIsSavingCoverPic] = useState(false);
 
@@ -135,41 +138,12 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   const progressBarBgClass = darkMode ? "bg-gray-700" : "bg-gray-100";
   const progressBarFillClass = darkMode ? "bg-white" : "bg-gray-900";
 
-  const createImage = (url) =>
-    new Promise((resolve, reject) => {
-      const image = new Image();
-      image.addEventListener("load", () => resolve(image));
-      image.addEventListener("error", (error) => reject(error));
-      image.setAttribute("crossOrigin", "anonymous");
-      image.src = url;
-    });
-
-  const getCroppedImg = async (imageSrc, pixelCrop) => {
-    const image = await createImage(imageSrc);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
-    ctx.drawImage(
-      image,
-      pixelCrop.x,
-      pixelCrop.y,
-      pixelCrop.width,
-      pixelCrop.height,
-      0,
-      0,
-      pixelCrop.width,
-      pixelCrop.height,
-    );
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.95);
-    });
-  };
-
   const onProfileCropComplete = (_, croppedAreaPixels) =>
     setProfileCroppedAreaPixels(croppedAreaPixels);
-  const onCoverCropComplete = (_, croppedAreaPixels) =>
+  const onCoverCropComplete = (_, croppedAreaPixels) => {
+    coverCropPixelsRef.current = croppedAreaPixels;
     setCoverCroppedAreaPixels(croppedAreaPixels);
+  };
 
   const autoSaveProfilePicture = async (croppedFile) => {
     try {
@@ -243,12 +217,15 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       setProfileImageToCrop,
       setShowProfileCropper,
     );
-  const handleCoverFileChange = (e) =>
+  const handleCoverFileChange = (e) => {
+    coverCropPixelsRef.current = null;
+    setCoverCroppedAreaPixels(null);
     handleFileChange(
       e.target.files[0],
       setCoverImageToCrop,
       setShowCoverCropper,
     );
+  };
 
   const handleProfileCropSave = async () => {
     if (!profileCroppedAreaPixels || !profileImageToCrop) return;
@@ -281,13 +258,15 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   };
 
   const handleCoverCropSave = async () => {
-    if (!coverCroppedAreaPixels || !coverImageToCrop) return;
+    const pixelCrop = coverCropPixelsRef.current || coverCroppedAreaPixels;
+    if (!pixelCrop || !coverImageToCrop) return;
     setIsSavingCoverPic(true);
     setError("");
     try {
       const croppedBlob = await getCroppedImg(
         coverImageToCrop,
-        coverCroppedAreaPixels,
+        pixelCrop,
+        COVER_ASPECT,
       );
       const croppedFile = new File([croppedBlob], "cropped-cover.jpg", {
         type: "image/jpeg",
@@ -609,7 +588,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
         {/* Cover photo */}
         <div
           onClick={() => coverPhotoInputRef.current?.click()}
-          className="relative h-28 bg-gradient-to-br from-gray-800 to-gray-600 cursor-pointer overflow-hidden group"
+          className="relative cursor-pointer overflow-hidden group"
         >
           {isSavingCoverPic && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
@@ -617,13 +596,14 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
             </div>
           )}
 
-          {coverPhotoPreview && coverPhotoPreview !== defaultCoverPhoto && (
-            <img
-              src={coverPhotoPreview}
-              alt="Cover"
-              className="w-full h-full object-cover"
-            />
-          )}
+          <CoverBanner
+            src={
+              coverPhotoPreview && coverPhotoPreview !== defaultCoverPhoto
+                ? coverPhotoPreview
+                : ""
+            }
+            className="bg-gradient-to-br from-gray-800 to-gray-600"
+          />
 
           {/* Hover overlay - always visible but more prominent on hover */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-300 flex items-center justify-center">
@@ -805,7 +785,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
                 <h3
                   className={`font-semibold ${textClass} text-sm flex items-center gap-2`}
                 >
-                  <Move size={16} /> Position cover photo (16:9)
+                  <Move size={16} /> Position cover photo (16:5)
                 </h3>
                 <button
                   onClick={() => setShowCoverCropper(false)}
@@ -819,9 +799,10 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
                   image={coverImageToCrop}
                   crop={coverCrop}
                   zoom={coverZoom}
-                  aspect={16 / 9}
+                  aspect={COVER_ASPECT}
                   onCropChange={setCoverCrop}
                   onZoomChange={setCoverZoom}
+                  onCropAreaChange={onCoverCropComplete}
                   onCropComplete={onCoverCropComplete}
                   showGrid={true}
                 />

@@ -3,6 +3,7 @@ import { auth, db } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { displayCompany } from "../utils/profileHelpers.jsx";
+import CoverBanner from "../components/CoverBanner";
 import { updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -776,21 +777,12 @@ const SelectLayout = ({ darkMode }) => {
         background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
       }}
     >
-      <div className="h-36 relative overflow-hidden">
-        {/* Cover photo without green tint */}
-        {userData?.coverPhotoURL ? (
-          <img
-            src={userData.coverPhotoURL}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div
-            style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
-            className="w-full h-full"
-          />
-        )}
-      </div>
+      <CoverBanner src={userData?.coverPhotoURL}>
+        <div
+          style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+          className="h-full w-full"
+        />
+      </CoverBanner>
       <div
         className="px-6 py-4 relative"
         style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
@@ -955,21 +947,12 @@ const SelectLayout = ({ darkMode }) => {
 
   const Layout5 = () => (
     <div className="w-full font-['Inter']" style={{ background: "#0d1b2e" }}>
-      <div className="h-36 relative overflow-hidden">
-        {/* Cover photo without brightness reduction */}
-        {userData?.coverPhotoURL ? (
-          <img
-            src={userData.coverPhotoURL}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div
-            style={{ background: "linear-gradient(135deg, #0d1b2e, #1a3a5c)" }}
-            className="w-full h-full"
-          />
-        )}
-      </div>
+      <CoverBanner src={userData?.coverPhotoURL}>
+        <div
+          style={{ background: "linear-gradient(135deg, #0d1b2e, #1a3a5c)" }}
+          className="h-full w-full"
+        />
+      </CoverBanner>
       <div className="px-6 py-4 relative" style={{ background: "#0d1b2e" }}>
         <div
           className="w-20 h-20 rounded-2xl overflow-hidden absolute -top-10 left-6"
@@ -1134,18 +1117,11 @@ const SelectLayout = ({ darkMode }) => {
 
   const Layout6 = () => (
     <div className="w-full bg-white font-['Inter']">
-      <div
-        className="h-36 relative overflow-hidden"
+      <CoverBanner
+        src={userData?.coverPhotoURL}
+        alt=""
         style={{ background: "linear-gradient(135deg, #1f2937, #111827)" }}
-      >
-        {userData?.coverPhotoURL && (
-          <img
-            src={userData.coverPhotoURL}
-            alt=""
-            className="w-full h-full object-cover"
-          />
-        )}
-      </div>
+      />
       <div className="px-6 py-4 relative bg-white">
         <div
           className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-white shadow-lg absolute -top-10 left-6"
