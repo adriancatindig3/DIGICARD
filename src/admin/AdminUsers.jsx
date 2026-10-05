@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { updateDoc, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { applyAccountStatus } from "../user/utils/ensureUserAccount";
 import {
   FilterPill,
   STATUS_CONFIG,
@@ -122,12 +123,17 @@ const AdminUsers = ({
         console.error(blocked);
         return;
       }
-      await updateDoc(doc(db, "users", userId), {
-        accountStatus: "approved",
-        isActive: true,
-        approvedAt: new Date().toISOString(),
-        approvedBy: currentUser?.email || "admin",
-      });
+      await applyAccountStatus(
+        userId,
+        selectedUser?.email,
+        {
+          accountStatus: "approved",
+          isActive: true,
+          approvedAt: new Date().toISOString(),
+          approvedBy: currentUser?.email || "admin",
+        },
+        selectedUser?.id === userId ? selectedUser.siblingIds : [],
+      );
       await logAdminAction(
         currentUser?.email,
         "APPROVE",
@@ -157,12 +163,17 @@ const AdminUsers = ({
         console.error(blocked);
         return;
       }
-      await updateDoc(doc(db, "users", userId), {
-        accountStatus: "rejected",
-        isActive: false,
-        rejectedAt: new Date().toISOString(),
-        rejectedBy: currentUser?.email || "admin",
-      });
+      await applyAccountStatus(
+        userId,
+        selectedUser?.email,
+        {
+          accountStatus: "rejected",
+          isActive: false,
+          rejectedAt: new Date().toISOString(),
+          rejectedBy: currentUser?.email || "admin",
+        },
+        selectedUser?.id === userId ? selectedUser.siblingIds : [],
+      );
       await logAdminAction(
         currentUser?.email,
         "REJECT",
@@ -193,12 +204,17 @@ const AdminUsers = ({
         console.error(blocked);
         return;
       }
-      await updateDoc(doc(db, "users", userId), {
-        accountStatus: "deleted",
-        isActive: false,
-        deletedAt: new Date().toISOString(),
-        deletedBy: currentUser?.email || "admin",
-      });
+      await applyAccountStatus(
+        userId,
+        selectedUser?.email,
+        {
+          accountStatus: "deleted",
+          isActive: false,
+          deletedAt: new Date().toISOString(),
+          deletedBy: currentUser?.email || "admin",
+        },
+        selectedUser?.id === userId ? selectedUser.siblingIds : [],
+      );
       await logAdminAction(
         currentUser?.email,
         "DELETE",

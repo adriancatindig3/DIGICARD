@@ -6,15 +6,13 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
-import { auth, db } from "../../config/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { auth } from "../../config/firebase";
 import {
-  createPendingUser,
+  ensureCanonicalAccount,
   ensureDesignatedAdmin,
 } from "../utils/ensureUserAccount";
 import {
   PROTECTED_ADMIN_EMAIL,
-  isAdminAccount,
   isDesignatedAdmin,
   routePath,
 } from "../../admin/adminHelpers";
@@ -54,21 +52,13 @@ function Login() {
             return;
           }
 
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-
-          if (userDoc.exists()) {
-            navigate(routePath(userDoc.data()), { replace: true });
-            return;
-          }
-
-          // No profile yet — same pending status page as an existing user.
           try {
-            await createPendingUser(user);
+            const account = await ensureCanonicalAccount(user);
+            navigate(routePath(account.data), { replace: true });
           } catch (createErr) {
             console.error("Error creating user account:", createErr);
+            navigate("/pending", { replace: true });
           }
-          navigate("/pending", { replace: true });
         } catch (err) {
           console.error("Auth check error:", err);
           setCheckingAuth(false);
@@ -83,10 +73,7 @@ function Login() {
 
   const saveUserToFirestore = async (user) => {
     try {
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (isDesignatedAdmin(user) || isDesignatedAdmin(userDoc.data())) {
+      if (isDesignatedAdmin(user)) {
         await ensureDesignatedAdmin(user);
         return {
           success: true,
@@ -98,48 +85,16 @@ function Login() {
         };
       }
 
-      if (!userDoc.exists()) {
-        await createPendingUser(user);
-        return { success: true, status: "pending", accountType: "user" };
-      }
-
-      const data = userDoc.data();
-      const status = data?.accountStatus;
-      const accountType = data?.accountType;
-      const role = data?.role;
-
-      if (isAdminAccount(data)) {
-        await updateDoc(userRef, {
-          lastLoginAt: new Date().toISOString(),
-          isActive: true,
-        });
-        return {
-          success: true,
-          status: status || "approved",
-          accountType,
-          role,
-        };
-      }
-
-      // Handle deleted accounts
-      if (status === "deleted") {
-        await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
-        return { success: true, status: "deleted", accountType, role };
-      }
-
-      // Handle rejected accounts
-      if (status === "rejected") {
-        await updateDoc(userRef, { lastLoginAt: new Date().toISOString() });
-        return { success: true, status: "rejected", accountType, role };
-      }
-
-      // Update last login for existing users
-      await updateDoc(userRef, {
-        lastLoginAt: new Date().toISOString(),
-        isActive: status === "approved",
-      });
-
-      return { success: true, status: status || "pending", accountType, role };
+      const account = await ensureCanonicalAccount(user);
+      const data = account.data || {};
+      return {
+        success: true,
+        status: data.accountStatus || "pending",
+        accountStatus: data.accountStatus || "pending",
+        accountType: data.accountType || "user",
+        role: data.role,
+        email: data.email || user.email,
+      };
     } catch (error) {
       console.error("Error checking user:", error);
       return { success: false, error: error.message };

@@ -18,6 +18,10 @@ import {
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { isDesignatedAdmin, refusedAccountChange } from "../../admin/adminHelpers";
+import {
+  ensureCanonicalAccount,
+  findUsersByEmail,
+} from "../utils/ensureUserAccount";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut,
@@ -124,17 +128,29 @@ function Settings({ darkMode }) {
         throw new Error("This admin account cannot be deleted.");
       }
       const uid = user.uid;
+      const account = await ensureCanonicalAccount(user);
+      let matches = [];
+      try {
+        matches = await findUsersByEmail(user.email);
+      } catch (lookupError) {
+        console.warn("Could not find linked accounts:", lookupError);
+      }
+      const ids = [
+        ...new Set([account.id, uid, ...matches.map((match) => match.id)]),
+      ];
 
-      await deleteDoc(doc(db, "users", uid));
+      await Promise.all(ids.map((id) => deleteDoc(doc(db, "users", id))));
 
       const relatedCollections = ["qr_codes", "scans", "analytics"];
       for (const colName of relatedCollections) {
-        try {
-          const q = query(collection(db, colName), where("uid", "==", uid));
-          const snapshot = await getDocs(q);
-          await Promise.all(snapshot.docs.map((d) => deleteDoc(d.ref)));
-        } catch (err) {
-          console.warn(`Error deleting from ${colName}:`, err);
+        for (const id of ids) {
+          try {
+            const q = query(collection(db, colName), where("uid", "==", id));
+            const snapshot = await getDocs(q);
+            await Promise.all(snapshot.docs.map((d) => deleteDoc(d.ref)));
+          } catch (err) {
+            console.warn(`Error deleting from ${colName}:`, err);
+          }
         }
       }
 

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { subscribeCanonicalAccount } from "../utils/ensureUserAccount";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -16,7 +16,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import { isDesignatedAdmin } from "../../admin/adminHelpers";
 import UpdateProfile from "./UpdateProfile";
 import ViewQr from "./ViewQr";
@@ -69,11 +69,8 @@ function Home() {
       return;
     }
 
-    const userDocRef = doc(db, "users", currentUser.uid);
-
-    // Listen for real-time status changes
-    const unsubscribe = onSnapshot(
-      userDocRef,
+    return subscribeCanonicalAccount(
+      currentUser,
       (doc) => {
         if (doc.exists()) {
           if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
@@ -100,8 +97,6 @@ function Home() {
         console.error("Error checking status:", error);
       },
     );
-
-    return () => unsubscribe();
   }, [navigate]);
 
   useEffect(() => {

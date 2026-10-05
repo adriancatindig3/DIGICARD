@@ -8,6 +8,7 @@ import Login from "./user/pages/Login";
 import Home from "./user/pages/Home";
 import {
   createPendingUser,
+  ensureCanonicalAccount,
   ensureDesignatedAdmin,
 } from "./user/utils/ensureUserAccount";
 import UpdateProfile from "./user/pages/UpdateProfile";
@@ -18,7 +19,10 @@ import Rejected from "./user/status/Rejected";
 import Deleted from "./user/status/Deleted";
 import PublicProfile from "./user/pages/PublicProfile";
 import AdminDashboard from "./admin/AdminDashboard";
-import { isAdminAccount, isDesignatedAdmin } from "./admin/adminHelpers";
+import {
+  isDesignatedAdmin,
+  routeStatus,
+} from "./admin/adminHelpers";
 
 function RouteSpinner() {
   return (
@@ -39,24 +43,16 @@ async function readRouteStatus(user) {
     return "admin";
   }
 
+  try {
+    const account = await ensureCanonicalAccount(user);
+    return routeStatus(account.data);
+  } catch (error) {
+    console.error("Error resolving account:", error);
+  }
+
   const userDoc = await getDoc(doc(db, "users", user.uid));
-
   if (!userDoc.exists()) return "missing";
-
-  if (isDesignatedAdmin(userDoc.data()) || isAdminAccount(userDoc.data())) {
-    return "admin";
-  }
-
-  const accountStatus = userDoc.data()?.accountStatus;
-  if (
-    accountStatus === "approved" ||
-    accountStatus === "rejected" ||
-    accountStatus === "deleted"
-  ) {
-    return accountStatus;
-  }
-
-  return "pending";
+  return routeStatus(userDoc.data());
 }
 
 // Protected route that checks if user is approved

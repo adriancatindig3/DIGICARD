@@ -1,11 +1,11 @@
 // src/user/pages/Deleted.jsx - with real-time status listener
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { auth, db } from "../../config/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { isDesignatedAdmin } from "../../admin/adminHelpers";
+import { subscribeCanonicalAccount } from "../utils/ensureUserAccount";
 
 function Deleted() {
   const [isChecking, setIsChecking] = useState(true);
@@ -24,11 +24,8 @@ function Deleted() {
       return;
     }
 
-    const userDocRef = doc(db, "users", currentUser.uid);
-
-    // Real-time listener for status changes
-    const unsubscribe = onSnapshot(
-      userDocRef,
+    return subscribeCanonicalAccount(
+      currentUser,
       async (doc) => {
         if (doc.exists()) {
           if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
@@ -63,8 +60,6 @@ function Deleted() {
         setIsChecking(false);
       },
     );
-
-    return () => unsubscribe();
   }, [navigate]);
 
   const handleSignOut = async () => {

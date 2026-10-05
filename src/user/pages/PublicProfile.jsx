@@ -108,7 +108,13 @@ const handleConnectSubmit = async (e) => {
           setLoading(false);
           return;
         }
-        const data = userDoc.data();
+        let data = userDoc.data();
+        if (data?.aliasOf) {
+          const canonicalDoc = await getDoc(doc(db, "users", data.aliasOf));
+          if (canonicalDoc.exists() && !canonicalDoc.data()?.aliasOf) {
+            data = canonicalDoc.data();
+          }
+        }
 
         // Check account status - ONLY show if approved
         const status = data.accountStatus;

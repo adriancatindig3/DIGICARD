@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { auth, db } from "../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
@@ -9,9 +9,11 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  updateDoc,
 } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { getTheme, TABS, isDesignatedAdmin } from "./adminHelpers";
+import { collapseAccountsByEmail } from "../shared/accountIdentity";
 import AdminUsers from "./AdminUsers";
 import AdminAnalytics from "./AdminAnalytics";
 import AdminLogs from "./AdminLogs";
@@ -55,6 +57,7 @@ const AdminDashboard = () => {
   const [dynamicRoles, setDynamicRoles] = useState([]);
   const [orphanRoles, setOrphanRoles] = useState([]); // Track roles that exist in users but not in roles collection
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const linkingRef = useRef(new Set());
 
   const navigate = useNavigate();
   const T = getTheme(darkMode);
@@ -159,22 +162,17 @@ const AdminDashboard = () => {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        let pending = 0,
-          approved = 0,
-          rejected = 0;
         const list = [];
-        const roleCounts = {};
-        const userRolesSet = new Set(); // Track unique roles found in users
 
-        snapshot.docs.forEach((doc) => {
-          const data = doc.data();
+        snapshot.docs.forEach((userDoc) => {
+          const data = userDoc.data();
 
           if (data.accountStatus === "deleted") return;
           if (data.accountType === "admin") return;
-          if (isDesignatedAdmin({ id: doc.id, ...data })) return;
+          if (isDesignatedAdmin({ id: userDoc.id, ...data })) return;
 
-          const u = {
-            id: doc.id,
+          list.push({
+            id: userDoc.id,
             email: data.email || "",
             displayName: data.displayName || "Unknown",
             photoURL: data.photoURL || data.profilePic || "",
@@ -188,20 +186,46 @@ const AdminDashboard = () => {
             accountType: data.accountType || "user",
             selectedLayout: data.selectedLayout || 1,
             skills: data.skills || "",
-          };
+            aliasOf: data.aliasOf || "",
+          });
+        });
 
-          list.push(u);
+        const visible = collapseAccountsByEmail(list);
+        let pending = 0,
+          approved = 0,
+          rejected = 0;
+        const roleCounts = {};
+        const userRolesSet = new Set();
 
-          // Count by occupation (which should match role.value from database)
+        visible.forEach((u) => {
           const occ = u.occupation?.toLowerCase().replace(/\s+/g, "-");
           if (occ) {
             roleCounts[occ] = (roleCounts[occ] || 0) + 1;
             userRolesSet.add(occ);
           }
-
           if (u.accountStatus === "pending") pending++;
           else if (u.accountStatus === "approved") approved++;
           else if (u.accountStatus === "rejected") rejected++;
+
+          (u.siblingIds || []).forEach((siblingId) => {
+            const sibling = list.find((item) => item.id === siblingId);
+            const alreadyLinked =
+              sibling?.aliasOf === u.id &&
+              sibling?.accountStatus === u.accountStatus;
+            if (alreadyLinked) return;
+            const key = `${siblingId}->${u.id}`;
+            if (linkingRef.current.has(key)) return;
+            linkingRef.current.add(key);
+            updateDoc(doc(db, "users", siblingId), {
+              aliasOf: u.id,
+              accountStatus: u.accountStatus || "pending",
+              isActive: u.isActive === true,
+              updatedAt: new Date().toISOString(),
+            }).catch((error) => {
+              linkingRef.current.delete(key);
+              console.error("Could not link duplicate account:", error);
+            });
+          });
         });
 
         // Find orphan roles - roles that exist in users but not in dynamicRoles
@@ -233,8 +257,8 @@ const AdminDashboard = () => {
           isOrphan: role.isOrphan || false,
         }));
 
-        setUsers(list);
-        setStats({ total: list.length, pending, approved, rejected });
+        setUsers(visible);
+        setStats({ total: visible.length, pending, approved, rejected });
         setRoleStats(roleStatsArray);
         setLoading(false);
       },

@@ -1,10 +1,9 @@
 // UpdateProfile.jsx - with dark mode support
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import {
-  doc,
   getDoc,
   updateDoc,
   setDoc,
@@ -19,6 +18,7 @@ import {
 import Cropper from "react-easy-crop";
 import CoverBanner, { COVER_ASPECT } from "../components/CoverBanner";
 import { getCroppedImg } from "../utils/cropImage";
+import { canonicalUserRef } from "../utils/ensureUserAccount";
 import {
   ArrowLeft,
   Save,
@@ -151,7 +151,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       if (!currentUser) return false;
       const result = await uploadImage(croppedFile, "users/profile-photos");
       const newPhotoUrl = result.url;
-      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocRef = await canonicalUserRef(currentUser);
       await updateDoc(userDocRef, {
         photoURL: newPhotoUrl,
         profilePic: newPhotoUrl,
@@ -175,7 +175,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       if (!currentUser) return false;
       const result = await uploadImage(croppedFile, "users/cover-photos");
       const newCoverUrl = result.url;
-      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocRef = await canonicalUserRef(currentUser);
       await updateDoc(userDocRef, {
         coverPhotoURL: newCoverUrl,
         coverPhoto: newCoverUrl,
@@ -349,7 +349,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
           navigate("/login");
           return;
         }
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocRef = await canonicalUserRef(currentUser);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -495,7 +495,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
         updatedAt: new Date().toISOString(),
       };
 
-      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocRef = await canonicalUserRef(currentUser);
       const userDoc = await getDoc(userDocRef);
       const refused = refusedAccountChange(
         { ...(userDoc.data() || {}), email: currentUser.email, uid: currentUser.uid },

@@ -11,6 +11,10 @@ import {
 import { db } from "../config/firebase";
 import { logAdminAction } from "../admin/adminHelpers";
 import {
+  applyAccountStatus,
+  ensureCanonicalAccount,
+} from "../user/utils/ensureUserAccount";
+import {
   formatActivationKey,
   generateActivationKey,
   isWellFormedActivationKey,
@@ -104,8 +108,10 @@ export async function redeemActivationKey(user, rawKey) {
     throw new Error("This activation key is not valid.");
   }
 
+  const account = await ensureCanonicalAccount(user);
   const keyRef = activationKeyRef(code);
-  const userRef = doc(db, "users", user.uid);
+  const userRef = doc(db, "users", account.id);
+  const now = new Date().toISOString();
 
   await runTransaction(db, async (tx) => {
     const keySnap = await tx.get(keyRef);
@@ -128,11 +134,10 @@ export async function redeemActivationKey(user, rawKey) {
       throw new Error("This account cannot be activated with a key.");
     }
 
-    const now = new Date().toISOString();
     tx.update(keyRef, {
       status: "used",
       usedAt: now,
-      usedBy: user.uid,
+      usedBy: account.id,
       usedByEmail: user.email || "",
     });
     tx.update(userRef, {
@@ -146,10 +151,24 @@ export async function redeemActivationKey(user, rawKey) {
     });
   });
 
+  await applyAccountStatus(
+    account.id,
+    user.email,
+    {
+      accountStatus: "approved",
+      status: "approved",
+      isActive: true,
+      approvedAt: now,
+      approvedBy: "activation-key",
+      activationKey: formatActivationKey(code),
+      updatedAt: now,
+    },
+  );
+
   await logAdminAction(
     user.email,
     "ACTIVATE",
-    { id: user.uid, email: user.email, displayName: user.displayName },
+    { id: account.id, email: user.email, displayName: user.displayName },
     `Activated with ${formatActivationKey(code)}`,
   );
 }

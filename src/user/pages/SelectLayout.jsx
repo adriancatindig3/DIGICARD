@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { auth, db } from "../../config/firebase";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { getDoc } from "firebase/firestore";
 import { displayCompany } from "../utils/profileHelpers.jsx";
 import CoverBanner from "../components/CoverBanner";
 import { updateDoc } from "firebase/firestore";
+import { canonicalUserRef } from "../utils/ensureUserAccount";
 import { onAuthStateChanged } from "firebase/auth";
 
 import {
@@ -115,7 +116,7 @@ const SelectLayout = ({ darkMode }) => {
       }
       setUser(currentUser);
       try {
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDocRef = await canonicalUserRef(currentUser);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -169,7 +170,7 @@ const SelectLayout = ({ darkMode }) => {
     setLoading(true);
     setSelectedLayout(layoutId);
     try {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = await canonicalUserRef(user);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         await updateDoc(userDocRef, {

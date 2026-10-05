@@ -1,11 +1,11 @@
 // src/user/pages/Pending.jsx - with real-time status listener and sign out
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { auth, db } from "../../config/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { auth } from "../../config/firebase";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { isDesignatedAdmin } from "../../admin/adminHelpers";
+import { subscribeCanonicalAccount } from "../utils/ensureUserAccount";
 import { redeemActivationKey } from "../../shared/activationKeys";
 import { formatActivationKey } from "../../shared/activationKeyFormat";
 
@@ -29,11 +29,8 @@ function Pending() {
       return;
     }
 
-    const userDocRef = doc(db, "users", currentUser.uid);
-
-    // Real-time listener for status changes
-    const unsubscribe = onSnapshot(
-      userDocRef,
+    return subscribeCanonicalAccount(
+      currentUser,
       (doc) => {
         if (doc.exists()) {
           if (isDesignatedAdmin({ id: doc.id, ...doc.data() })) {
@@ -62,8 +59,6 @@ function Pending() {
         setIsChecking(false);
       },
     );
-
-    return () => unsubscribe();
   }, [navigate]);
 
   const handleSignOut = async () => {

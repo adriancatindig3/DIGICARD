@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../config/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { ensureCanonicalAccount } from "../utils/ensureUserAccount";
 import { onAuthStateChanged } from "firebase/auth";
 import { profileUrl } from "../../config/site";
 import QRCodeLib from "react-qr-code";
@@ -122,13 +123,14 @@ function ViewQr({ darkMode }) {
       }
       setUser(currentUser);
       try {
-        const userDocRef = doc(db, "users", currentUser.uid);
+        const account = await ensureCanonicalAccount(currentUser);
+        const userDocRef = doc(db, "users", account.id);
         const userDoc = await getDoc(userDocRef);
-        const data = userDoc.exists() ? userDoc.data() : {};
+        const data = userDoc.exists() ? userDoc.data() : account.data || {};
         setQrData({
           name: data.displayName || currentUser.displayName || "User",
           email: currentUser.email || "",
-          profileUrl: getProfileUrl(currentUser.uid),
+          profileUrl: getProfileUrl(account.id),
         });
       } catch (error) {
         console.error("Error fetching user data:", error);
