@@ -1,5 +1,5 @@
-// Public card banners are 16:5. The saved cover is already that crop,
-// so the bitmap is stretched to the frame instead of cropped again.
+// The card banner is 16:5. The photo keeps its own proportions inside
+// that frame so a portrait is not squashed to fill the strip.
 export const COVER_ASPECT = 16 / 5;
 
 export default function CoverBanner({
@@ -19,7 +19,7 @@ export default function CoverBanner({
           src={src}
           alt={alt}
           className="absolute inset-0 h-full w-full"
-          style={{ objectFit: "fill" }}
+          style={{ objectFit: "contain", objectPosition: "center" }}
         />
       ) : (
         children

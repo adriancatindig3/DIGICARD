@@ -7,17 +7,14 @@ export const createImage = (url) =>
     image.src = url;
   });
 
-// `aspect` locks the saved bitmap to the cover frame (16:5). The source
-// rectangle is still the region the user positioned.
-export const getCroppedImg = async (imageSrc, pixelCrop, aspect) => {
+// Copy the positioned rectangle as-is. Do not rescale it into another
+// aspect, or a portrait gets squashed into the banner.
+export const getCroppedImg = async (imageSrc, pixelCrop) => {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const outWidth = Math.max(1, Math.round(pixelCrop.width));
-  const outHeight = Math.max(
-    1,
-    Math.round(aspect ? outWidth / aspect : pixelCrop.height),
-  );
+  const outHeight = Math.max(1, Math.round(pixelCrop.height));
   canvas.width = outWidth;
   canvas.height = outHeight;
   ctx.drawImage(

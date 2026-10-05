@@ -263,11 +263,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
     setIsSavingCoverPic(true);
     setError("");
     try {
-      const croppedBlob = await getCroppedImg(
-        coverImageToCrop,
-        pixelCrop,
-        COVER_ASPECT,
-      );
+      const croppedBlob = await getCroppedImg(coverImageToCrop, pixelCrop);
       const croppedFile = new File([croppedBlob], "cropped-cover.jpg", {
         type: "image/jpeg",
       });
