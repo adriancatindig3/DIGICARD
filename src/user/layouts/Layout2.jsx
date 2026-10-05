@@ -1,11 +1,9 @@
 import { FaEnvelope, FaPhone } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardRootProps } from "../utils/cardStyle";
 const Layout2 = ({ userData, onConnect }) => (
-  <div
-    className="w-full font-['Inter'] text-white"
-    style={{ background: "#0f1623" }}
-  >
+  <div {...cardRootProps(userData, "#0f1623", "text-white")}>
     <div className="pt-6 pb-4 px-4">
       <div className="flex items-center gap-4 mb-4">
         <div

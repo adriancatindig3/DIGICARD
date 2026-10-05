@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+.card-on-gradient .text-gray-900,
+.card-on-gradient .text-gray-700,
+.card-on-gradient .text-gray-600,
+.card-on-gradient .text-gray-500,
+.card-on-gradient .text-gray-400 {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.card-on-gradient .bg-white,
+.card-on-gradient .bg-gray-50,
+.card-on-gradient .bg-gray-100 {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.card-on-gradient .border-gray-100,
+.card-on-gradient .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.16);
+}

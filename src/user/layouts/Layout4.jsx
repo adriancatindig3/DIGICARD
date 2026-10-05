@@ -2,23 +2,25 @@ import { FaEnvelope, FaPhone } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
 import CoverBanner from "../components/CoverBanner";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardFill, cardRootProps } from "../utils/cardStyle";
 
 const Layout4 = ({ userData, onConnect }) => (
   <div
-    className="w-full font-['Inter'] text-white"
-    style={{
-      background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
-    }}
+    {...cardRootProps(
+      userData,
+      "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
+      "text-white",
+    )}
   >
     <CoverBanner src={userData?.coverPhotoURL}>
       <div
-        style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+        style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
         className="h-full w-full"
       />
     </CoverBanner>
     <div
       className="px-6 py-4 relative"
-      style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+      style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
     >
       <div
         className="w-20 h-20 rounded-2xl overflow-hidden absolute -top-10 left-6 border-4"

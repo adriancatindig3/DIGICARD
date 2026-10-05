@@ -6,6 +6,13 @@ import { displayCompany } from "../utils/profileHelpers.jsx";
 import CoverBanner from "../components/CoverBanner";
 import { updateDoc } from "firebase/firestore";
 import { canonicalUserRef } from "../utils/ensureUserAccount";
+import CardStyleEditor from "../components/CardStyleEditor";
+import {
+  DEFAULT_CARD_STYLE,
+  cardFill,
+  cardRootProps,
+  cardStyleFromAccount,
+} from "../utils/cardStyle";
 import { onAuthStateChanged } from "firebase/auth";
 
 import {
@@ -60,6 +67,9 @@ const Toast = ({ message, visible, darkMode }) => (
 
 const SelectLayout = ({ darkMode }) => {
   const [selectedLayout, setSelectedLayout] = useState(1);
+  const [editingCard, setEditingCard] = useState(false);
+  const [draftStyle, setDraftStyle] = useState(DEFAULT_CARD_STYLE);
+  const [styleSaving, setStyleSaving] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
@@ -140,6 +150,7 @@ const SelectLayout = ({ darkMode }) => {
             selectedLayout: data.selectedLayout || 1,
             coverPhotoURL: data.coverPhotoURL || "",
             skills: data.skills || "",
+            ...cardStyleFromAccount(data),
           });
           setSelectedLayout(data.selectedLayout || 1);
         } else {
@@ -184,6 +195,41 @@ const SelectLayout = ({ darkMode }) => {
       console.error(e);
     } finally {
       setTimeout(() => setLoading(false), 400);
+    }
+  };
+
+  const openCardEditor = () => {
+    const saved = cardStyleFromAccount(userData);
+    setDraftStyle({
+      cardGradient: saved.cardGradient || DEFAULT_CARD_STYLE.cardGradient,
+      cardGradientAngle:
+        userData?.cardGradientAngle == null
+          ? DEFAULT_CARD_STYLE.cardGradientAngle
+          : saved.cardGradientAngle,
+      cardFont: saved.cardFont || DEFAULT_CARD_STYLE.cardFont,
+    });
+    setEditingCard(true);
+  };
+
+  const saveCardStyle = async () => {
+    if (!user || styleSaving) return;
+    setStyleSaving(true);
+    const next = {
+      cardGradient: draftStyle.cardGradient,
+      cardGradientAngle: draftStyle.cardGradientAngle,
+      cardFont: draftStyle.cardFont,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      const userDocRef = await canonicalUserRef(user);
+      await updateDoc(userDocRef, next);
+      setUserData((prev) => ({ ...prev, ...next }));
+      setEditingCard(false);
+      showToast("Card style saved");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setStyleSaving(false);
     }
   };
 
@@ -232,10 +278,11 @@ const SelectLayout = ({ darkMode }) => {
 
   const Layout1 = () => (
     <div
-      className="w-full font-['Inter'] text-white"
-      style={{
-        background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
-      }}
+      {...cardRootProps(
+        userData,
+        "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
+        "text-white",
+      )}
     >
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
@@ -434,10 +481,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout2 = () => (
-    <div
-      className="w-full font-['Inter'] text-white"
-      style={{ background: "#0f1623" }}
-    >
+    <div {...cardRootProps(userData, "#0f1623", "text-white")}>
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
           <div
@@ -641,7 +685,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout3 = () => (
-    <div className="w-full bg-white font-['Inter']">
+    <div {...cardRootProps(userData, "#ffffff")}>
       <div className="pt-6 pb-4 px-4">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
@@ -773,20 +817,21 @@ const SelectLayout = ({ darkMode }) => {
 
   const Layout4 = () => (
     <div
-      className="w-full font-['Inter'] text-white"
-      style={{
-        background: "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
-      }}
+      {...cardRootProps(
+        userData,
+        "linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)",
+        "text-white",
+      )}
     >
       <CoverBanner src={userData?.coverPhotoURL}>
         <div
-          style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+          style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
           className="h-full w-full"
         />
       </CoverBanner>
       <div
         className="px-6 py-4 relative"
-        style={{ background: "linear-gradient(135deg, #1a2e1a, #0f1f0f)" }}
+        style={{ background: cardFill("linear-gradient(135deg, #1a2e1a, #0f1f0f)") }}
       >
         <div
           className="w-20 h-20 rounded-2xl overflow-hidden absolute -top-10 left-6 border-4"
@@ -947,14 +992,14 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout5 = () => (
-    <div className="w-full font-['Inter']" style={{ background: "#0d1b2e" }}>
+    <div {...cardRootProps(userData, "#0d1b2e", "text-white")}>
       <CoverBanner src={userData?.coverPhotoURL}>
         <div
-          style={{ background: "linear-gradient(135deg, #0d1b2e, #1a3a5c)" }}
+          style={{ background: cardFill("linear-gradient(135deg, #0d1b2e, #1a3a5c)") }}
           className="h-full w-full"
         />
       </CoverBanner>
-      <div className="px-6 py-4 relative" style={{ background: "#0d1b2e" }}>
+      <div className="px-6 py-4 relative" style={{ background: cardFill("#0d1b2e") }}>
         <div
           className="w-20 h-20 rounded-2xl overflow-hidden absolute -top-10 left-6"
           style={{
@@ -1117,11 +1162,11 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout6 = () => (
-    <div className="w-full bg-white font-['Inter']">
+    <div {...cardRootProps(userData, "#ffffff")}>
       <CoverBanner
         src={userData?.coverPhotoURL}
         alt=""
-        style={{ background: "linear-gradient(135deg, #1f2937, #111827)" }}
+        style={{ background: cardFill("linear-gradient(135deg, #1f2937, #111827)") }}
       />
       <div className="px-6 py-4 relative bg-white">
         <div
@@ -1238,8 +1283,11 @@ const SelectLayout = ({ darkMode }) => {
 
   const Layout7 = () => (
     <div
-      className="w-full font-['Inter'] text-white"
-      style={{ background: "linear-gradient(160deg, #2a3a2a, #1a2a1e)" }}
+      {...cardRootProps(
+        userData,
+        "linear-gradient(160deg, #2a3a2a, #1a2a1e)",
+        "text-white",
+      )}
     >
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div
@@ -1412,10 +1460,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout8 = () => (
-    <div
-      className="w-full font-['Inter'] text-white"
-      style={{ background: "#0f1623" }}
-    >
+    <div {...cardRootProps(userData, "#0f1623", "text-white")}>
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div
           className="w-24 h-24 rounded-full overflow-hidden border-2 mb-3"
@@ -1598,7 +1643,7 @@ const SelectLayout = ({ darkMode }) => {
   );
 
   const Layout9 = () => (
-    <div className="w-full bg-white font-['Inter']">
+    <div {...cardRootProps(userData, "#ffffff")}>
       <div className="flex flex-col items-center pt-8 pb-4 px-4">
         <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-gray-200 mb-3">
           {userData?.photoURL ? (
@@ -1829,6 +1874,19 @@ const SelectLayout = ({ darkMode }) => {
 
   const currentLayout = layouts[currentIndex];
 
+  if (editingCard) {
+    return (
+      <CardStyleEditor
+        userData={{ ...userData, selectedLayout }}
+        draft={draftStyle}
+        onChange={setDraftStyle}
+        onBack={() => setEditingCard(false)}
+        onDone={saveCardStyle}
+        saving={styleSaving}
+      />
+    );
+  }
+
   return (
     <div className={`min-h-screen ${bgClass}`}>
       <Toast
@@ -1950,6 +2008,16 @@ const SelectLayout = ({ darkMode }) => {
               </button>
             )}
           </div>
+
+          {selectedLayout === currentLayout.id && (
+            <button
+              type="button"
+              onClick={openCardEditor}
+              className="mt-3 w-full rounded-xl bg-gray-900 py-2.5 text-sm font-semibold text-white"
+            >
+              Edit card
+            </button>
+          )}
         </div>
       </div>
 
@@ -2019,6 +2087,16 @@ const SelectLayout = ({ darkMode }) => {
                     {layout.component}
                   </div>
                 </div>
+
+                {isSelected && (
+                  <button
+                    type="button"
+                    onClick={openCardEditor}
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold bg-gray-900 text-white hover:bg-gray-700"
+                  >
+                    Edit card
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleSelectLayout(layout.id)}

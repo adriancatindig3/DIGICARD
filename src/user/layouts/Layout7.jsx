@@ -1,11 +1,15 @@
 import { FaEnvelope, FaPhone, FaMapMarkerAlt } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardRootProps } from "../utils/cardStyle";
 
 const Layout7 = ({ userData, onConnect }) => (
   <div
-    className="w-full font-['Inter'] text-white"
-    style={{ background: "linear-gradient(160deg, #2a3a2a, #1a2a1e)" }}
+    {...cardRootProps(
+      userData,
+      "linear-gradient(160deg, #2a3a2a, #1a2a1e)",
+      "text-white",
+    )}
   >
     <div className="flex flex-col items-center pt-8 pb-4 px-4">
       <div

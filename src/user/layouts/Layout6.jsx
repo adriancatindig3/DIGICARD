@@ -2,13 +2,14 @@ import { FaEnvelope, FaPhone } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
 import CoverBanner from "../components/CoverBanner";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardFill, cardRootProps } from "../utils/cardStyle";
 
 const Layout6 = ({ userData, onConnect }) => (
-  <div className="w-full bg-white font-['Inter']">
+  <div {...cardRootProps(userData, "#ffffff")}>
     <CoverBanner
       src={userData?.coverPhotoURL}
       alt=""
-      style={{ background: "linear-gradient(135deg, #1f2937, #111827)" }}
+      style={{ background: cardFill("linear-gradient(135deg, #1f2937, #111827)") }}
     />
     <div className="px-6 py-4 relative bg-white">
       <div

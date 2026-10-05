@@ -1,12 +1,10 @@
 import { FaEnvelope, FaPhone, FaMapMarkerAlt } from "react-icons/fa";
 import ConnectButton from "../components/ConnectButton";
 import { getSocialIcon, getInitials } from "../utils/profileHelpers.jsx";
+import { cardRootProps } from "../utils/cardStyle";
 
 const Layout8 = ({ userData, onConnect }) => (
-  <div
-    className="w-full font-['Inter'] text-white"
-    style={{ background: "#0f1623" }}
-  >
+  <div {...cardRootProps(userData, "#0f1623", "text-white")}>
     <div className="flex flex-col items-center pt-8 pb-4 px-4">
       <div
         className="w-24 h-24 rounded-full overflow-hidden border-2 mb-3"
