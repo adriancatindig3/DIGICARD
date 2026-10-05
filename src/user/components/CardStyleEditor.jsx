@@ -126,32 +126,35 @@ export default function CardStyleEditor({
 
   return (
     <div className="min-h-full bg-white text-gray-900">
-      <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-gray-800 hover:bg-gray-100"
-          aria-label="Back"
-        >
-          ‹
-        </button>
-        <h2 className="text-base font-semibold">Edit card</h2>
-        <button
-          type="button"
-          onClick={onDone}
-          disabled={saving}
-          className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          {saving ? "Saving" : "Done"}
-        </button>
+      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-gray-800 hover:bg-gray-100"
+            aria-label="Back"
+          >
+            ‹
+          </button>
+          <h2 className="text-base font-semibold">Edit card</h2>
+          <button
+            type="button"
+            onClick={onDone}
+            disabled={saving}
+            className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {saving ? "Saving" : "Done"}
+          </button>
+        </div>
+        <div className="bg-gray-50 px-4 pb-3">
+          <div className="mx-auto max-h-[42vh] max-w-md overflow-y-auto overscroll-contain rounded-2xl shadow-md">
+            <Layout userData={previewData} />
+          </div>
+        </div>
       </div>
 
       <div className="mx-auto max-w-md px-4 py-5">
-        <div className="overflow-hidden rounded-2xl shadow-md">
-          <Layout userData={previewData} />
-        </div>
-
-        <div className="mt-6">
+        <div>
           <h3 className="text-sm font-semibold">Style</h3>
 
           <p className="mt-4 text-xs text-gray-500">Background</p>
