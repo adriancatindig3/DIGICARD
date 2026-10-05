@@ -7,7 +7,8 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import { auth, db } from "../../config/firebase";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { createPendingUser } from "../utils/ensureUserAccount";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -52,9 +53,6 @@ function Login() {
               case "approved":
                 navigate("/home", { replace: true });
                 break;
-              case "registration":
-                navigate("/register", { replace: true });
-                break;
               case "pending":
                 navigate("/pending", { replace: true });
                 break;
@@ -65,12 +63,17 @@ function Login() {
                 navigate("/deleted", { replace: true });
                 break;
               default:
-                navigate("/register", { replace: true });
+                navigate("/pending", { replace: true });
             }
             return;
           } else {
-            // User exists in Auth but not in Firestore - needs registration
-            setCheckingAuth(false);
+            // No profile yet — same pending status page as an existing user.
+            try {
+              await createPendingUser(user);
+            } catch (createErr) {
+              console.error("Error creating user account:", createErr);
+            }
+            navigate("/pending", { replace: true });
           }
         } catch (err) {
           console.error("Auth check error:", err);
@@ -90,10 +93,8 @@ function Login() {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-        // ✅ DON'T CREATE THE USER DOCUMENT HERE!
-        // Just return that user needs to complete registration
-        console.log("New user needs to complete registration:", user.email);
-        return { success: true, status: "registration", isNewUser: true };
+        await createPendingUser(user);
+        return { success: true, status: "pending", accountType: "user" };
       } else {
         const status = userDoc.data()?.accountStatus;
         const accountType = userDoc.data()?.accountType;
@@ -154,11 +155,9 @@ function Login() {
         return;
       }
 
-      // Route based on account status
+      // Route based on account status — same destinations as returning users
       if (saveResult.status === "approved") {
         navigate("/home", { replace: true });
-      } else if (saveResult.status === "registration") {
-        navigate("/register", { replace: true });
       } else if (saveResult.status === "pending") {
         navigate("/pending", { replace: true });
       } else if (saveResult.status === "rejected") {
@@ -166,7 +165,7 @@ function Login() {
       } else if (saveResult.status === "deleted") {
         navigate("/deleted", { replace: true });
       } else {
-        navigate("/register", { replace: true });
+        navigate("/pending", { replace: true });
       }
     } catch (err) {
       console.error("Login error:", err);

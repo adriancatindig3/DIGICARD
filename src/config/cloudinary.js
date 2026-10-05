@@ -2,7 +2,8 @@ import { Cloudinary } from "@cloudinary/url-gen";
 
 // Client-side Cloudinary config (only public keys)
 const cloudinaryConfig = {
-  cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
+  cloudName: "df3fvlapt",
+  uploadPreset: "chat-app",
 };
 
 // Initialize Cloudinary for URL generation
@@ -17,6 +18,7 @@ export const uploadImage = async (file, folder = "users/profile-photos") => {
   const formData = new FormData();
   formData.append("image", file);
   formData.append("folder", folder);
+  formData.append("upload_preset", cloudinaryConfig.uploadPreset);
 
   try {
     // Send to your PHP backend

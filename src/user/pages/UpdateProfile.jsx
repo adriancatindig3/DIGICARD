@@ -95,11 +95,11 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
   const navigate = useNavigate();
 
   const defaultProfilePic =
-    "https://res.cloudinary.com/dduu3qj8q/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
+    "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
   const defaultCoverPhoto =
-    "https://res.cloudinary.com/dduu3qj8q/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
+    "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/profile-photos/fflqvlvzyt2cec7yukfp.jpg";
   const cccLogo =
-    "https://res.cloudinary.com/dduu3qj8q/image/upload/v1770705831/users/company-logos/ccc.png";
+    "https://res.cloudinary.com/df3fvlapt/image/upload/v1770705831/users/company-logos/ccc.png";
 
   // Theme-based classes
   const bgClass = darkMode ? "bg-gray-900" : "bg-gray-50";
