@@ -9,11 +9,7 @@ import {
   Layout8,
   Layout9,
 } from "../layouts";
-import {
-  CARD_FONTS,
-  CARD_GRADIENTS,
-  cardGradientCss,
-} from "../utils/cardStyle";
+import { CARD_FONTS, cardGradientCss } from "../utils/cardStyle";
 
 const LAYOUTS = {
   1: Layout1,
@@ -69,21 +65,35 @@ export default function CardStyleEditor({
           <h3 className="text-sm font-semibold">Style</h3>
 
           <p className="mt-4 text-xs text-gray-500">Background</p>
-          <div className="mt-2 flex gap-3">
-            {CARD_GRADIENTS.map((gradient) => {
-              const selected = draft.cardGradient === gradient.id;
-              return (
-                <button
-                  key={gradient.id}
-                  type="button"
-                  aria-label={`${gradient.id} gradient`}
-                  aria-pressed={selected}
-                  onClick={() => onChange({ ...draft, cardGradient: gradient.id })}
-                  className={`h-11 w-11 rounded-full ${selected ? "ring-2 ring-gray-900 ring-offset-2" : ""}`}
-                  style={{ background: cardGradientCss(gradient.id, draft.cardGradientAngle) }}
-                />
-              );
-            })}
+          <div className="mt-2 flex items-center gap-3">
+            <div
+              className="h-11 min-w-0 flex-1 rounded-full border border-gray-200"
+              style={{
+                background: cardGradientCss(
+                  draft.cardColorStart,
+                  draft.cardColorEnd,
+                  draft.cardGradientAngle,
+                ),
+              }}
+            />
+            <input
+              type="color"
+              aria-label="First gradient color"
+              value={draft.cardColorStart}
+              onChange={(event) =>
+                onChange({ ...draft, cardColorStart: event.target.value })
+              }
+              className="color-circle shrink-0"
+            />
+            <input
+              type="color"
+              aria-label="Second gradient color"
+              value={draft.cardColorEnd}
+              onChange={(event) =>
+                onChange({ ...draft, cardColorEnd: event.target.value })
+              }
+              className="color-circle shrink-0"
+            />
           </div>
 
           <div className="mt-5 flex items-center justify-between">
@@ -99,7 +109,6 @@ export default function CardStyleEditor({
             onChange={(event) =>
               onChange({
                 ...draft,
-                cardGradient: draft.cardGradient || "forest",
                 cardGradientAngle: Number(event.target.value),
               })
             }

@@ -201,9 +201,10 @@ const SelectLayout = ({ darkMode }) => {
   const openCardEditor = () => {
     const saved = cardStyleFromAccount(userData);
     setDraftStyle({
-      cardGradient: saved.cardGradient || DEFAULT_CARD_STYLE.cardGradient,
+      cardColorStart: saved.cardColorStart || DEFAULT_CARD_STYLE.cardColorStart,
+      cardColorEnd: saved.cardColorEnd || DEFAULT_CARD_STYLE.cardColorEnd,
       cardGradientAngle:
-        userData?.cardGradientAngle == null
+        userData?.cardGradientAngle == null && !saved.cardColorStart
           ? DEFAULT_CARD_STYLE.cardGradientAngle
           : saved.cardGradientAngle,
       cardFont: saved.cardFont || DEFAULT_CARD_STYLE.cardFont,
@@ -215,7 +216,9 @@ const SelectLayout = ({ darkMode }) => {
     if (!user || styleSaving) return;
     setStyleSaving(true);
     const next = {
-      cardGradient: draftStyle.cardGradient,
+      cardColorStart: draftStyle.cardColorStart,
+      cardColorEnd: draftStyle.cardColorEnd,
+      cardGradient: "",
       cardGradientAngle: draftStyle.cardGradientAngle,
       cardFont: draftStyle.cardFont,
       updatedAt: new Date().toISOString(),

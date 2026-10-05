@@ -239,7 +239,7 @@ function Settings({ darkMode }) {
               onClick={() => setOpenManual(!openManual)}
               className="w-full flex items-center justify-between"
             >
-              <span className={`text-sm ${textClass}`}>How to use e-CARD</span>
+              <span className={`text-sm ${textClass}`}>How to use Digical</span>
               <ChevronRight
                 size={16}
                 className={`${textSubClass} transition-transform duration-200 ${openManual ? "rotate-90" : ""}`}
@@ -371,7 +371,7 @@ function Settings({ darkMode }) {
           <p
             className={`text-center text-xs ${darkMode ? "text-gray-700" : "text-gray-300"} pb-4`}
           >
-            © 2026 e-CARD
+            © 2026 Digical
           </p>
         </div>
       </motion.div>

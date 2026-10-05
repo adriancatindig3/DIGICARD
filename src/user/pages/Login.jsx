@@ -169,24 +169,11 @@ function Login() {
         className="relative max-w-md w-full mx-auto"
       >
         <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 p-6 sm:p-8">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden bg-gray-50 shadow-md">
-              <img
-                src="/image.png"
-                alt="e-CARD Logo"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://via.placeholder.com/80x80?text=QR";
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Title Section */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+            <p className="text-sm font-semibold tracking-wide text-gray-900">
+              Digical
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mt-2">
               Welcome back
             </h1>
             <p className="text-gray-500 text-sm sm:text-base mt-2">
@@ -297,7 +284,7 @@ function Login() {
 
           {/* Footer */}
           <p className="text-center text-xs text-gray-400 mt-8">
-            © 2026 e-CARD. All rights reserved.
+            © 2026 Digical. All rights reserved.
           </p>
         </div>
       </motion.div>
@@ -341,7 +328,7 @@ function Login() {
                   1. Eligibility
                 </h3>
                 <p>
-                  e-CARD is a digital business card. New accounts stay pending
+                  Digical is a digital business card. New accounts stay pending
                   until they are approved.
                 </p>
               </div>
@@ -350,7 +337,7 @@ function Login() {
                   2. Use of Service
                 </h3>
                 <p>
-                  You agree to use e-CARD in accordance with all applicable laws.
+                  You agree to use Digical in accordance with all applicable laws.
                 </p>
               </div>
               <div>
@@ -424,7 +411,7 @@ function Login() {
                 </h3>
                 <p>
                   When you sign in with Google, we collect your profile picture
-                  and username to personalize your e-CARD experience.
+                  and username to personalize your Digical experience.
                 </p>
               </div>
               <div>
@@ -433,7 +420,7 @@ function Login() {
                 </h3>
                 <p>
                   Your profile picture and username are used solely to display
-                  your identity within the e-CARD platform.
+                  your identity within the Digical platform.
                 </p>
               </div>
               <div>

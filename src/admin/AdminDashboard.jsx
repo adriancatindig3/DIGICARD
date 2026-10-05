@@ -35,8 +35,6 @@ import {
   X,
 } from "lucide-react";
 
-const logo = "/e-CARD generic.png";
-
 const AdminDashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -358,15 +356,8 @@ const AdminDashboard = () => {
         className={`md:hidden fixed top-0 left-0 right-0 ${mobileHeaderBgClass} border-b px-4 py-3 flex items-center justify-between z-40`}
       >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
-            <img
-              src={logo}
-              alt="e-CARD"
-              className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-            />
-          </div>
           <span className={`font-semibold ${mobileHeaderTextClass}`}>
-            e-CARD Admin
+            Digical Admin
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -419,16 +410,9 @@ const AdminDashboard = () => {
             >
               <div className={`p-5 border-b ${borderClass}`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden">
-                    <img
-                      src={logo}
-                      alt="e-CARD"
-                      className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-                    />
-                  </div>
                   <div>
                     <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                      e-CARD Admin
+                      Digical Admin
                     </div>
                     <div className={`text-[9px] ${sidebarSubtextClass}`}>
                       Dashboard
@@ -493,16 +477,9 @@ const AdminDashboard = () => {
         {/* Logo */}
         <div className={`p-5 border-b ${borderClass}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden">
-              <img
-                src={logo}
-                alt="e-CARD"
-                className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-              />
-            </div>
             <div>
               <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                e-CARD Admin
+                Digical Admin
               </div>
               <div className={`text-[9px] ${sidebarSubtextClass}`}>
                 Dashboard

@@ -1052,7 +1052,7 @@ const UpdateProfile = ({ darkMode, onSaveComplete }) => {
       </form>
 
       <div className={`text-center text-xs ${textLightClass} pb-6`}>
-        © 2026 e-CARD · NFC Digital Business Card Platform
+        © 2026 Digical · NFC Digital Business Card Platform
       </div>
     </div>
   );

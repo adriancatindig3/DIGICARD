@@ -195,15 +195,8 @@ function Home() {
         className={`md:hidden fixed top-0 left-0 right-0 ${mobileHeaderBgClass} border-b px-4 py-3 flex items-center justify-between z-50`}
       >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden">
-            <img
-              src="/e-CARD generic.png"
-              alt="e-CARD"
-              className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-            />
-          </div>
           <span className={`font-semibold ${mobileHeaderTextClass}`}>
-            e-CARD
+            Digical
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -256,16 +249,9 @@ function Home() {
             >
               <div className={`p-5 border-b ${borderClass}`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden">
-                    <img
-                      src="/e-CARD generic.png"
-                      alt="e-CARD"
-                      className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-                    />
-                  </div>
                   <div>
                     <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                      e-CARD
+                      Digical
                     </div>
                     <div className={`text-[9px] ${sidebarSubtextClass}`}>
                       Digital Business Card
@@ -334,16 +320,9 @@ function Home() {
         {/* Logo */}
         <div className={`p-5 border-b ${borderClass}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden">
-              <img
-                src="/e-CARD generic.png"
-                alt="e-CARD"
-                className={`w-full h-full object-contain ${darkMode ? "brightness-0 invert" : ""}`}
-              />
-            </div>
             <div>
               <div className={`text-sm font-bold ${sidebarTextClass}`}>
-                e-CARD
+                Digical
               </div>
               <div className={`text-[9px] ${sidebarSubtextClass}`}>
                 Digital Business Card

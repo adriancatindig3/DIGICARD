@@ -18,3 +18,31 @@
 .card-on-gradient .border-gray-200 {
   border-color: rgba(255, 255, 255, 0.16);
 }
+
+.color-circle {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px #111827;
+  overflow: hidden;
+  cursor: pointer;
+  background: transparent;
+}
+
+.color-circle::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-circle::-webkit-color-swatch {
+  border: none;
+  border-radius: 9999px;
+}
+
+.color-circle::-moz-color-swatch {
+  border: none;
+  border-radius: 9999px;
+}

@@ -149,6 +149,8 @@ const handleConnectSubmit = async (e) => {
           socialLinks: allSocialLinks,
           selectedLayout: data.selectedLayout || 1,
           cardGradient: data.cardGradient || "",
+          cardColorStart: data.cardColorStart || "",
+          cardColorEnd: data.cardColorEnd || "",
           cardGradientAngle: data.cardGradientAngle,
           cardFont: data.cardFont || "",
           coverPhotoURL: data.coverPhotoURL || "",
